@@ -19,6 +19,16 @@ import ManagerDashboard from "./pages/dashboards/ManagerDashboard";
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
 import CustomerDashboard from "./pages/dashboards/CustomerDashboard";
 
+// Phase 3 Pages
+import ProjectsList from "./pages/projects/ProjectsList";
+import ProjectDetails from "./pages/projects/ProjectDetails";
+import TaskManagement from "./pages/projects/TaskManagement";
+import CustomersList from "./pages/customers/CustomersList";
+import CustomerProfile from "./pages/customers/CustomerProfile";
+import CustomerSupport from "./pages/support/CustomerSupport";
+import FleetOverview from "./pages/fleet/FleetOverview";
+import VehicleDetails from "./pages/fleet/VehicleDetails";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -41,38 +51,24 @@ const App = () => (
             {/* Protected routes with app layout */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardRedirect />} />
-              <Route
-                path="/dashboard/admin"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/dashboard/manager"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                    <ManagerDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/dashboard/employee"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager', 'employee']}>
-                    <EmployeeDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/dashboard/customer"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'customer']}>
-                    <CustomerDashboard />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/manager" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><ManagerDashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/employee" element={<ProtectedRoute allowedRoles={['admin', 'manager', 'employee']}><EmployeeDashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/customer" element={<ProtectedRoute allowedRoles={['admin', 'customer']}><CustomerDashboard /></ProtectedRoute>} />
+              
+              {/* Projects */}
+              <Route path="/projects" element={<ProjectsList />} />
+              <Route path="/projects/:id" element={<ProjectDetails />} />
+              <Route path="/projects/:id/tasks" element={<TaskManagement />} />
+              
+              {/* Customers */}
+              <Route path="/customers" element={<CustomersList />} />
+              <Route path="/customers/:id" element={<CustomerProfile />} />
+              <Route path="/support" element={<CustomerSupport />} />
+              
+              {/* Fleet */}
+              <Route path="/fleet" element={<FleetOverview />} />
+              <Route path="/fleet/:id" element={<VehicleDetails />} />
             </Route>
 
             {/* Catch-all */}
