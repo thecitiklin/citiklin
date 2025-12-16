@@ -29,6 +29,19 @@ import CustomerSupport from "./pages/support/CustomerSupport";
 import FleetOverview from "./pages/fleet/FleetOverview";
 import VehicleDetails from "./pages/fleet/VehicleDetails";
 
+// Phase 4 Pages
+import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
+import SalesPipeline from "./pages/sales/SalesPipeline";
+import CRMDashboard from "./pages/crm/CRMDashboard";
+import InventoryDashboard from "./pages/inventory/InventoryDashboard";
+import ProcurementManagement from "./pages/procurement/ProcurementManagement";
+import PaymentsPage from "./pages/payments/PaymentsPage";
+import InvoicingPage from "./pages/invoicing/InvoicingPage";
+import ContactPage from "./pages/public/ContactPage";
+import BookServicePage from "./pages/public/BookServicePage";
+import ReviewsPage from "./pages/public/ReviewsPage";
+import HelpCenterPage from "./pages/public/HelpCenterPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -42,13 +55,17 @@ const App = () => (
             {/* Public routes */}
             <Route element={<PublicLayout />}>
               <Route path="/" element={<Index />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/book-service" element={<BookServicePage />} />
+              <Route path="/reviews" element={<ReviewsPage />} />
+              <Route path="/help" element={<HelpCenterPage />} />
             </Route>
 
-            {/* Auth routes (no layout) */}
+            {/* Auth routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Protected routes with app layout */}
+            {/* Protected routes */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardRedirect />} />
               <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
@@ -69,9 +86,23 @@ const App = () => (
               {/* Fleet */}
               <Route path="/fleet" element={<FleetOverview />} />
               <Route path="/fleet/:id" element={<VehicleDetails />} />
+              
+              {/* Analytics */}
+              <Route path="/analytics" element={<AnalyticsDashboard />} />
+              
+              {/* Sales & CRM */}
+              <Route path="/sales" element={<SalesPipeline />} />
+              <Route path="/crm" element={<CRMDashboard />} />
+              
+              {/* Inventory & Procurement */}
+              <Route path="/inventory" element={<InventoryDashboard />} />
+              <Route path="/procurement" element={<ProcurementManagement />} />
+              
+              {/* Financial */}
+              <Route path="/payments" element={<PaymentsPage />} />
+              <Route path="/invoicing" element={<InvoicingPage />} />
             </Route>
 
-            {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
