@@ -1,8 +1,13 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { Calendar, CreditCard, Star, Headphones } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import {
+  KPICard,
+  StatusBadge,
+  getStatusType,
+  QuickActions,
+} from '@/components/dashboard';
 
 const upcomingBookings = [
   { id: 1, service: 'Regular Home Cleaning', date: 'Dec 15, 2024', time: '10:00 AM', status: 'confirmed' },
@@ -15,12 +20,19 @@ const recentPayments = [
   { id: 3, amount: 'KES 8,000', date: 'Nov 10, 2024', status: 'completed' },
 ];
 
+const quickActions = [
+  { label: 'Book Service', icon: Calendar, href: '/book-service' },
+  { label: 'Make Payment', icon: CreditCard, href: '/payments' },
+  { label: 'Leave Review', icon: Star, href: '/reviews' },
+  { label: 'Get Support', icon: Headphones, href: '/support' },
+];
+
 export default function CustomerDashboard() {
   const { user } = useAuth();
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Welcome, {user?.name}</h1>
           <p className="text-muted-foreground">Manage your cleaning services</p>
@@ -30,50 +42,10 @@ export default function CustomerDashboard() {
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Bookings
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Spent
-            </CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">KES 45,200</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Services Used
-            </CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Support Tickets
-            </CardTitle>
-            <Headphones className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-          </CardContent>
-        </Card>
+        <KPICard title="Active Bookings" value="2" icon={Calendar} />
+        <KPICard title="Total Spent" value="KES 45,200" icon={CreditCard} />
+        <KPICard title="Services Used" value="12" icon={Star} />
+        <KPICard title="Support Tickets" value="0" icon={Headphones} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -96,16 +68,7 @@ export default function CustomerDashboard() {
                       {booking.date} at {booking.time}
                     </p>
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className={
-                      booking.status === 'confirmed'
-                        ? 'bg-success text-success-foreground'
-                        : 'bg-warning text-warning-foreground'
-                    }
-                  >
-                    {booking.status}
-                  </Badge>
+                  <StatusBadge status={booking.status} type={getStatusType(booking.status)} />
                 </div>
               ))}
               <Button variant="outline" className="w-full">
@@ -132,9 +95,7 @@ export default function CustomerDashboard() {
                     <p className="font-medium">{payment.amount}</p>
                     <p className="text-sm text-muted-foreground">{payment.date}</p>
                   </div>
-                  <Badge variant="secondary" className="bg-success text-success-foreground">
-                    {payment.status}
-                  </Badge>
+                  <StatusBadge status={payment.status} type={getStatusType(payment.status)} />
                 </div>
               ))}
               <Button variant="outline" className="w-full">
@@ -146,31 +107,11 @@ export default function CustomerDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-4">
-            <Button variant="outline" className="h-auto flex-col gap-2 py-4">
-              <Calendar className="h-5 w-5" />
-              <span>Book Service</span>
-            </Button>
-            <Button variant="outline" className="h-auto flex-col gap-2 py-4">
-              <CreditCard className="h-5 w-5" />
-              <span>Make Payment</span>
-            </Button>
-            <Button variant="outline" className="h-auto flex-col gap-2 py-4">
-              <Star className="h-5 w-5" />
-              <span>Leave Review</span>
-            </Button>
-            <Button variant="outline" className="h-auto flex-col gap-2 py-4">
-              <Headphones className="h-5 w-5" />
-              <span>Get Support</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <QuickActions
+        title="Quick Actions"
+        actions={quickActions}
+        variant="grid"
+      />
     </div>
   );
 }

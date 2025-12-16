@@ -1,7 +1,13 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { Clock, CheckCircle, Calendar, Star } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  KPICard,
+  StatusBadge,
+  PriorityIndicator,
+  WeeklyActivityChart,
+} from '@/components/dashboard';
 
 const todayTasks = [
   { id: 1, title: 'Office cleaning - Building A', time: '9:00 AM', priority: 'high', status: 'in-progress' },
@@ -17,25 +23,18 @@ const stats = [
   { label: 'Performance', value: '4.8', icon: Star },
 ];
 
+const weeklyData = [
+  { day: 'Mon', tasks: 5, hours: 8 },
+  { day: 'Tue', tasks: 4, hours: 7 },
+  { day: 'Wed', tasks: 6, hours: 9 },
+  { day: 'Thu', tasks: 3, hours: 6 },
+  { day: 'Fri', tasks: 4, hours: 7 },
+  { day: 'Sat', tasks: 2, hours: 4 },
+  { day: 'Sun', tasks: 0, hours: 0 },
+];
+
 export default function EmployeeDashboard() {
   const { user } = useAuth();
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-destructive text-destructive-foreground';
-      case 'medium': return 'bg-warning text-warning-foreground';
-      case 'low': return 'bg-muted text-muted-foreground';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'in-progress': return 'bg-primary text-primary-foreground';
-      case 'completed': return 'bg-success text-success-foreground';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -47,55 +46,52 @@ export default function EmployeeDashboard() {
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.label}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-            </CardContent>
-          </Card>
+          <KPICard key={stat.label} title={stat.label} value={stat.value} icon={stat.icon} />
         ))}
       </div>
 
-      {/* Today's Tasks */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Today's Tasks</CardTitle>
-          <CardDescription>Your assigned tasks for today</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {todayTasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Clock className="h-5 w-5" />
+      {/* Today's Tasks & Weekly Activity */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Today's Tasks</CardTitle>
+            <CardDescription>Your assigned tasks for today</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {todayTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Clock className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{task.title}</p>
+                      <p className="text-sm text-muted-foreground">{task.time}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{task.title}</p>
-                    <p className="text-sm text-muted-foreground">{task.time}</p>
+                  <div className="flex items-center gap-2">
+                    <PriorityIndicator priority={task.priority as 'high' | 'medium' | 'low'} showIcon={false} />
+                    <StatusBadge
+                      status={task.status.replace('-', ' ')}
+                      type={task.status === 'in-progress' ? 'info' : 'default'}
+                    />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={getPriorityColor(task.priority)} variant="secondary">
-                    {task.priority}
-                  </Badge>
-                  <Badge className={getStatusColor(task.status)} variant="secondary">
-                    {task.status.replace('-', ' ')}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <WeeklyActivityChart
+          data={weeklyData}
+          title="Weekly Activity"
+          description="Your tasks and hours this week"
+        />
+      </div>
 
       {/* Time Tracking */}
       <Card>
@@ -110,12 +106,8 @@ export default function EmployeeDashboard() {
               <p className="text-3xl font-bold">02:45:30</p>
             </div>
             <div className="flex gap-2">
-              <button className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90">
-                Stop
-              </button>
-              <button className="rounded-lg bg-muted px-4 py-2 text-sm font-medium hover:bg-muted/80">
-                Break
-              </button>
+              <Button variant="destructive">Stop</Button>
+              <Button variant="outline">Break</Button>
             </div>
           </div>
         </CardContent>
