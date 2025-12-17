@@ -54,12 +54,12 @@ const quickActions = [
 ];
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Welcome back, {user?.name}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Welcome back, {profile?.name}</h1>
         <p className="text-muted-foreground">Here's an overview of your business performance</p>
       </div>
 

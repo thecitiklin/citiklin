@@ -1,101 +1,202 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { User, AuthState, UserRole, ROLE_DASHBOARD_ROUTES } from '@/types/auth';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
-interface AuthContextType extends AuthState {
+type AppRole = 'admin' | 'manager' | 'employee' | 'customer';
+
+interface Profile {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url: string | null;
+  department: string | null;
+}
+
+interface AuthContextType {
+  user: User | null;
+  profile: Profile | null;
+  role: AppRole | null;
+  session: Session | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  signup: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   getDashboardRoute: () => string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for development
-const MOCK_USERS: Record<string, { password: string; user: User }> = {
-  'admin@citiklin.com': {
-    password: 'admin123',
-    user: { id: '1', email: 'admin@citiklin.com', name: 'Admin User', role: 'admin' },
-  },
-  'manager@citiklin.com': {
-    password: 'manager123',
-    user: { id: '2', email: 'manager@citiklin.com', name: 'Manager User', role: 'manager', department: 'Operations' },
-  },
-  'employee@citiklin.com': {
-    password: 'employee123',
-    user: { id: '3', email: 'employee@citiklin.com', name: 'Employee User', role: 'employee', department: 'Field Services' },
-  },
-  'customer@citiklin.com': {
-    password: 'customer123',
-    user: { id: '4', email: 'customer@citiklin.com', name: 'Customer User', role: 'customer' },
-  },
+const ROLE_DASHBOARD_ROUTES: Record<AppRole, string> = {
+  admin: '/dashboard/admin',
+  manager: '/dashboard/manager',
+  employee: '/dashboard/employee',
+  customer: '/dashboard/customer',
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [role, setRole] = useState<AppRole | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = useCallback(async (email: string, password: string) => {
-    setState((prev) => ({ ...prev, isLoading: true }));
+  const fetchUserData = useCallback(async (userId: string) => {
+    try {
+      // Fetch profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      } else if (profileData) {
+        setProfile(profileData);
+      }
 
-    const mockUser = MOCK_USERS[email.toLowerCase()];
-    
-    if (!mockUser) {
-      setState((prev) => ({ ...prev, isLoading: false }));
-      return { success: false, error: 'No account found with this email address' };
+      // Fetch role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('Error fetching role:', roleError);
+      } else if (roleData) {
+        setRole(roleData.role as AppRole);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
     }
-
-    if (mockUser.password !== password) {
-      setState((prev) => ({ ...prev, isLoading: false }));
-      return { success: false, error: 'Invalid password' };
-    }
-
-    setState({
-      user: mockUser.user,
-      isAuthenticated: true,
-      isLoading: false,
-    });
-
-    return { success: true };
   }, []);
 
-  const logout = useCallback(() => {
-    setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          // Defer Supabase calls with setTimeout to avoid deadlock
+          setTimeout(() => {
+            fetchUserData(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+          setRole(null);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchUserData(session.user.id);
+      }
+      setIsLoading(false);
     });
+
+    return () => subscription.unsubscribe();
+  }, [fetchUserData]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }, []);
+
+  const signup = useCallback(async (email: string, password: string, name: string) => {
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name,
+          },
+        },
+      });
+
+      if (error) {
+        if (error.message.includes('already registered')) {
+          return { success: false, error: 'This email is already registered. Please login instead.' };
+        }
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setProfile(null);
+    setRole(null);
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    setState((prev) => ({ ...prev, isLoading: true }));
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+      if (error) {
+        return { success: false, error: error.message };
+      }
 
-    const mockUser = MOCK_USERS[email.toLowerCase()];
-    
-    setState((prev) => ({ ...prev, isLoading: false }));
-
-    if (!mockUser) {
-      return { success: false, error: 'No account found with this email address' };
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'An unexpected error occurred' };
     }
-
-    return { success: true };
   }, []);
 
   const getDashboardRoute = useCallback(() => {
-    if (!state.user) return '/login';
-    return ROLE_DASHBOARD_ROUTES[state.user.role];
-  }, [state.user]);
+    if (!role) return '/login';
+    return ROLE_DASHBOARD_ROUTES[role];
+  }, [role]);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, resetPassword, getDashboardRoute }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        role,
+        session,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        signup,
+        logout,
+        resetPassword,
+        getDashboardRoute,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

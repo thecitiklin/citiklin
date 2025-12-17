@@ -28,13 +28,13 @@ const quickActions = [
 ];
 
 export default function CustomerDashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Welcome, {user?.name}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Welcome, {profile?.name}</h1>
           <p className="text-muted-foreground">Manage your cleaning services</p>
         </div>
         <Button>Book New Service</Button>

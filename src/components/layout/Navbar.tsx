@@ -19,7 +19,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ onMenuClick, showMenuButton = false }: NavbarProps) {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, profile, role, isAuthenticated, logout } = useAuth();
 
   const getInitials = (name: string) => {
     return name
@@ -64,7 +64,7 @@ export function Navbar({ onMenuClick, showMenuButton = false }: NavbarProps) {
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                     <Avatar className="h-9 w-9">
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                        {user ? getInitials(user.name) : 'U'}
+                        {profile ? getInitials(profile.name) : 'U'}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -72,10 +72,10 @@ export function Navbar({ onMenuClick, showMenuButton = false }: NavbarProps) {
                 <DropdownMenuContent className="w-56 bg-popover" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user?.name}</p>
+                      <p className="text-sm font-medium leading-none">{profile?.name}</p>
                       <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                       <p className="text-xs leading-none text-muted-foreground capitalize">
-                        {user?.role}
+                        {role}
                       </p>
                     </div>
                   </DropdownMenuLabel>

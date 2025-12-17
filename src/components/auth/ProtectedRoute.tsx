@@ -1,16 +1,17 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/types/auth';
 import { ROUTES } from '@/lib/routes';
 import { Loader2 } from 'lucide-react';
 
+type AppRole = 'admin' | 'manager' | 'employee' | 'customer';
+
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: UserRole[];
+  allowedRoles?: AppRole[];
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, role, getDashboardRoute } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -25,9 +26,9 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && role && !allowedRoles.includes(role)) {
     // Redirect to user's appropriate dashboard if they don't have access
-    return <Navigate to={`/dashboard/${user.role}`} replace />;
+    return <Navigate to={getDashboardRoute()} replace />;
   }
 
   return <>{children}</>;

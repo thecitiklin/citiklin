@@ -10,7 +10,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Pages
 import Index from "./pages/Index";
-import Login from "./pages/Login";
+import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import DashboardRedirect from "./pages/DashboardRedirect";
@@ -42,6 +42,10 @@ import BookServicePage from "./pages/public/BookServicePage";
 import ReviewsPage from "./pages/public/ReviewsPage";
 import HelpCenterPage from "./pages/public/HelpCenterPage";
 
+// Phase 5 Admin Pages
+import UserManagement from "./pages/admin/UserManagement";
+import DepartmentManagement from "./pages/admin/DepartmentManagement";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -62,7 +66,8 @@ const App = () => (
             </Route>
 
             {/* Auth routes */}
-            <Route path="/login" element={<Login />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected routes */}
@@ -101,6 +106,10 @@ const App = () => (
               {/* Financial */}
               <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/invoicing" element={<InvoicingPage />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
+              <Route path="/admin/departments" element={<ProtectedRoute allowedRoles={['admin']}><DepartmentManagement /></ProtectedRoute>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
