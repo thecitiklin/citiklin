@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          is_active: boolean
+          key_type: string
+          key_value: string
+          last_updated_by: string | null
+          service_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          is_active?: boolean
+          key_type?: string
+          key_value: string
+          last_updated_by?: string | null
+          service_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          key_type?: string
+          key_value?: string
+          last_updated_by?: string | null
+          service_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null

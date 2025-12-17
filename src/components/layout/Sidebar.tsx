@@ -17,6 +17,7 @@ import {
   Building2,
   FileEdit,
   Headphones,
+  Key,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Users', icon: Settings, href: ROUTES.ADMIN.USERS, roles: ['admin'] },
       { label: 'Departments', icon: Building2, href: ROUTES.ADMIN.DEPARTMENTS, roles: ['admin'] },
+      { label: 'API Keys', icon: Key, href: ROUTES.ADMIN.API_KEYS, roles: ['admin'] },
       { label: 'CMS', icon: FileEdit, href: ROUTES.ADMIN.CMS, roles: ['admin'] },
     ],
   },
