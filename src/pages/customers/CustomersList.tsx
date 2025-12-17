@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, Mail, Phone, MapPin, MoreVertical } from 'lucide-react';
+import { Plus, Search, Filter, Mail, Phone, MapPin, MoreVertical, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,21 +27,34 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockCustomers } from '@/data/mockData';
-import type { CustomerStatus } from '@/types/customer';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { useCustomers, useCreateCustomer, useDeleteCustomer, type Customer } from '@/hooks/useCustomers';
 
-const statusColors: Record<CustomerStatus, string> = {
+const statusColors: Record<string, string> = {
   active: 'bg-accent text-accent-foreground',
   inactive: 'bg-muted text-muted-foreground',
-  pending: 'bg-warning text-warning-foreground',
+  lead: 'bg-warning text-warning-foreground',
 };
 
 export default function CustomersList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '', company: '', address: '' });
 
-  const filteredCustomers = mockCustomers.filter((customer) => {
+  const { data: customers = [], isLoading } = useCustomers();
+  const createCustomer = useCreateCustomer();
+  const deleteCustomer = useDeleteCustomer();
+
+  const filteredCustomers = customers.filter((customer) => {
     const matchesSearch =
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,6 +63,28 @@ export default function CustomersList() {
     return matchesSearch && matchesStatus;
   });
 
+  const handleCreateCustomer = async () => {
+    await createCustomer.mutateAsync({
+      name: newCustomer.name,
+      email: newCustomer.email,
+      phone: newCustomer.phone || null,
+      company: newCustomer.company || null,
+      address: newCustomer.address || null,
+      status: 'active',
+      notes: null,
+    });
+    setNewCustomer({ name: '', email: '', phone: '', company: '', address: '' });
+    setIsDialogOpen(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -57,10 +92,45 @@ export default function CustomersList() {
           <h1 className="text-2xl font-bold text-foreground">Customers</h1>
           <p className="text-muted-foreground">Manage your customer relationships</p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Customer
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Customer
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Customer</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input id="name" value={newCustomer.name} onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input id="email" type="email" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input id="phone" value={newCustomer.phone} onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company">Company</Label>
+                <Input id="company" value={newCustomer.company} onChange={(e) => setNewCustomer({ ...newCustomer, company: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input id="address" value={newCustomer.address} onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })} />
+              </div>
+              <Button onClick={handleCreateCustomer} disabled={!newCustomer.name || !newCustomer.email || createCustomer.isPending} className="w-full">
+                {createCustomer.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Create Customer
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
@@ -86,24 +156,12 @@ export default function CustomersList() {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="lead">Lead</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex border rounded-lg">
-                <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                >
-                  Grid
-                </Button>
-                <Button
-                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('table')}
-                >
-                  Table
-                </Button>
+                <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')}>Grid</Button>
+                <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('table')}>Table</Button>
               </div>
             </div>
           </div>
@@ -125,58 +183,38 @@ export default function CustomersList() {
                     </Avatar>
                     <div>
                       <Link to={`/customers/${customer.id}`}>
-                        <CardTitle className="text-base hover:text-primary transition-colors">
-                          {customer.name}
-                        </CardTitle>
+                        <CardTitle className="text-base hover:text-primary transition-colors">{customer.name}</CardTitle>
                       </Link>
-                      {customer.company && (
-                        <p className="text-sm text-muted-foreground">{customer.company}</p>
-                      )}
+                      {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
                     </div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link to={`/customers/${customer.id}`}>View Profile</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>Edit Customer</DropdownMenuItem>
-                      <DropdownMenuItem>Create Project</DropdownMenuItem>
+                      <DropdownMenuItem asChild><Link to={`/customers/${customer.id}`}>View Profile</Link></DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => deleteCustomer.mutate(customer.id)} className="text-destructive">Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Badge className={statusColors[customer.status]}>{customer.status}</Badge>
-
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span className="truncate">{customer.email}</span>
+                    <Mail className="h-4 w-4" /><span className="truncate">{customer.email}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span>{customer.phone}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span className="truncate">{customer.address}</span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between pt-2 border-t text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Projects: </span>
-                    <span className="font-medium">{customer.totalProjects}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Spent: </span>
-                    <span className="font-medium">KES {customer.totalSpent.toLocaleString()}</span>
-                  </div>
+                  {customer.phone && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-4 w-4" /><span>{customer.phone}</span>
+                    </div>
+                  )}
+                  {customer.address && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4" /><span className="truncate">{customer.address}</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -193,8 +231,6 @@ export default function CustomersList() {
                 <TableHead>Customer</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Projects</TableHead>
-                <TableHead>Total Spent</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -209,15 +245,8 @@ export default function CustomersList() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <Link
-                          to={`/customers/${customer.id}`}
-                          className="font-medium hover:text-primary"
-                        >
-                          {customer.name}
-                        </Link>
-                        {customer.company && (
-                          <p className="text-sm text-muted-foreground">{customer.company}</p>
-                        )}
+                        <Link to={`/customers/${customer.id}`} className="font-medium hover:text-primary">{customer.name}</Link>
+                        {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
                       </div>
                     </div>
                   </TableCell>
@@ -227,23 +256,15 @@ export default function CustomersList() {
                       <p className="text-muted-foreground">{customer.phone}</p>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge className={statusColors[customer.status]}>{customer.status}</Badge>
-                  </TableCell>
-                  <TableCell>{customer.totalProjects}</TableCell>
-                  <TableCell>KES {customer.totalSpent.toLocaleString()}</TableCell>
+                  <TableCell><Badge className={statusColors[customer.status]}>{customer.status}</Badge></TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link to={`/customers/${customer.id}`}>View Profile</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>Edit Customer</DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link to={`/customers/${customer.id}`}>View Profile</Link></DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => deleteCustomer.mutate(customer.id)} className="text-destructive">Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -257,7 +278,7 @@ export default function CustomersList() {
       {filteredCustomers.length === 0 && (
         <Card className="py-12">
           <CardContent className="text-center">
-            <p className="text-muted-foreground">No customers found matching your criteria.</p>
+            <p className="text-muted-foreground">No customers found. Add your first customer to get started.</p>
           </CardContent>
         </Card>
       )}
