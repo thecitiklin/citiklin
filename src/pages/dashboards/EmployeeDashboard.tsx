@@ -34,12 +34,12 @@ const weeklyData = [
 ];
 
 export default function EmployeeDashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Hello, {user?.name}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Hello, {profile?.name}</h1>
         <p className="text-muted-foreground">Here's your schedule for today</p>
       </div>
 

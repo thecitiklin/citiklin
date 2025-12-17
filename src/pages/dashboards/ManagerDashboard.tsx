@@ -73,13 +73,13 @@ const approvalColumns: Column<ApprovalItem>[] = [
 ];
 
 export default function ManagerDashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Welcome back, {user?.name}</h1>
-        <p className="text-muted-foreground">{user?.department} Department Overview</p>
+        <h1 className="text-3xl font-semibold tracking-tight">Welcome back, {profile?.name}</h1>
+        <p className="text-muted-foreground">{profile?.department || 'Your'} Department Overview</p>
       </div>
 
       {/* Team Stats */}

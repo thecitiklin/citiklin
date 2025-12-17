@@ -4,7 +4,7 @@ import { ROUTES } from '@/lib/routes';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardRedirect() {
-  const { user, isAuthenticated, isLoading, getDashboardRoute } = useAuth();
+  const { isAuthenticated, isLoading, getDashboardRoute } = useAuth();
 
   if (isLoading) {
     return (

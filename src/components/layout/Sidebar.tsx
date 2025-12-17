@@ -88,8 +88,8 @@ const NAV_SECTIONS: NavSection[] = [
 ];
 
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
-  const { user } = useAuth();
-  const userRole = user?.role || 'customer';
+  const { role } = useAuth();
+  const userRole = role || 'customer';
 
   const filteredSections = NAV_SECTIONS.map((section) => ({
     ...section,

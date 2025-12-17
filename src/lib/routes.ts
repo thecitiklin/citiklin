@@ -1,7 +1,7 @@
 export const ROUTES = {
   // Public routes
   HOME: '/',
-  LOGIN: '/login',
+  LOGIN: '/auth',
   RESET_PASSWORD: '/reset-password',
   CONTACT: '/contact',
   BOOK_SERVICE: '/book-service',
