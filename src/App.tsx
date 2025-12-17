@@ -45,6 +45,7 @@ import HelpCenterPage from "./pages/public/HelpCenterPage";
 // Phase 5 Admin Pages
 import UserManagement from "./pages/admin/UserManagement";
 import DepartmentManagement from "./pages/admin/DepartmentManagement";
+import ApiKeysManagement from "./pages/admin/ApiKeysManagement";
 
 const queryClient = new QueryClient();
 
@@ -110,6 +111,7 @@ const App = () => (
               {/* Admin Routes */}
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
               <Route path="/admin/departments" element={<ProtectedRoute allowedRoles={['admin']}><DepartmentManagement /></ProtectedRoute>} />
+              <Route path="/admin/api-keys" element={<ProtectedRoute allowedRoles={['admin']}><ApiKeysManagement /></ProtectedRoute>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
