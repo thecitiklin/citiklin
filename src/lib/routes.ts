@@ -3,6 +3,7 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/auth',
   RESET_PASSWORD: '/reset-password',
+  UPDATE_PASSWORD: '/update-password',
   CONTACT: '/contact',
   BOOK_SERVICE: '/book-service',
   REVIEWS: '/reviews',
@@ -52,6 +53,9 @@ export const ROUTES = {
     API_KEYS: '/admin/api-keys',
     CMS: '/admin/cms',
   },
+
+  // Settings routes
+  SETTINGS: '/settings',
 } as const;
 
 export const PUBLIC_ROUTES = [
