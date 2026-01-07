@@ -12,6 +12,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
+import UpdatePassword from "./pages/UpdatePassword";
 import NotFound from "./pages/NotFound";
 import DashboardRedirect from "./pages/DashboardRedirect";
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
@@ -46,6 +47,7 @@ import HelpCenterPage from "./pages/public/HelpCenterPage";
 import UserManagement from "./pages/admin/UserManagement";
 import DepartmentManagement from "./pages/admin/DepartmentManagement";
 import ApiKeysManagement from "./pages/admin/ApiKeysManagement";
+import AccountSettings from "./pages/settings/AccountSettings";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +72,7 @@ const App = () => (
             <Route path="/login" element={<Auth />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/update-password" element={<UpdatePassword />} />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
@@ -112,6 +115,9 @@ const App = () => (
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
               <Route path="/admin/departments" element={<ProtectedRoute allowedRoles={['admin']}><DepartmentManagement /></ProtectedRoute>} />
               <Route path="/admin/api-keys" element={<ProtectedRoute allowedRoles={['admin']}><ApiKeysManagement /></ProtectedRoute>} />
+              
+              {/* Settings */}
+              <Route path="/settings" element={<AccountSettings />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
