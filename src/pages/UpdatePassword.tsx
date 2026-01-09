@@ -49,21 +49,41 @@ export default function UpdatePassword() {
   });
 
   useEffect(() => {
-    // Check if user has a valid recovery session
+    // Listen for PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsValidSession(true);
+          setCheckingSession(false);
+        } else if (session) {
+          // User has a valid session (could be from recovery link)
+          setIsValidSession(true);
+          setCheckingSession(false);
+        }
+      }
+    );
+
+    // Check for existing session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Check if this is a recovery session (user clicked reset link)
       if (session) {
         setIsValidSession(true);
       } else {
-        setError('Invalid or expired reset link. Please request a new password reset.');
+        // Give a moment for the auth state change to fire
+        setTimeout(() => {
+          setCheckingSession(false);
+          if (!isValidSession) {
+            setError('Invalid or expired reset link. Please request a new password reset.');
+          }
+        }, 1000);
       }
-      setCheckingSession(false);
     };
 
     checkSession();
-  }, []);
+
+    return () => subscription.unsubscribe();
+  }, [isValidSession]);
 
   const onSubmit = async (data: UpdatePasswordFormData) => {
     setError(null);
