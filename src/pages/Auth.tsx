@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, ShieldCheck } from 'lucide-react';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -28,7 +29,7 @@ const signupSchema = z.object({
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, signup, isAuthenticated, isLoading: authLoading, getDashboardRoute } = useAuth();
+  const { login, signup, isAuthenticated, isLoading: authLoading, getDashboardRoute, role } = useAuth();
   const { toast } = useToast();
   
   const [activeTab, setActiveTab] = useState('login');
@@ -44,13 +45,13 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
 
-  // Redirect authenticated users
+  // Redirect authenticated users when role is loaded
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
+    if (isAuthenticated && !authLoading && role) {
       const from = (location.state as any)?.from?.pathname || getDashboardRoute();
       navigate(from, { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate, location, getDashboardRoute]);
+  }, [isAuthenticated, authLoading, role, navigate, location, getDashboardRoute]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +81,7 @@ export default function Auth() {
         title: 'Welcome back!',
         description: 'You have successfully signed in.',
       });
+      // Navigation handled by useEffect when role is loaded
     }
   };
 
@@ -103,6 +105,46 @@ export default function Auth() {
     }
 
     setIsLoading(true);
+    
+    // Check if email is authorized for registration
+    const { data: adminEmail, error: checkError } = await supabase
+      .from('admin_emails')
+      .select('email, used')
+      .eq('email', signupEmail.toLowerCase())
+      .maybeSingle();
+    
+    if (checkError) {
+      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Unable to verify registration eligibility.',
+      });
+      return;
+    }
+    
+    if (!adminEmail) {
+      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Registration Restricted',
+        description: 'Only authorized administrator emails can register. Contact your system administrator.',
+      });
+      return;
+    }
+    
+    if (adminEmail.used) {
+      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Already Registered',
+        description: 'This email has already been registered. Please sign in instead.',
+      });
+      setActiveTab('login');
+      setLoginEmail(signupEmail);
+      return;
+    }
+
     const result = await signup(signupEmail, signupPassword, signupName);
     setIsLoading(false);
 
@@ -114,9 +156,10 @@ export default function Auth() {
       });
     } else {
       toast({
-        title: 'Account Created!',
-        description: 'You have successfully signed up.',
+        title: 'Admin Account Created!',
+        description: 'Welcome to Citi Klin. You have been registered as an administrator.',
       });
+      // Navigation handled by useEffect when role is loaded
     }
   };
 
@@ -144,14 +187,19 @@ export default function Auth() {
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl font-bold text-center">Welcome</CardTitle>
             <CardDescription className="text-center">
-              Sign in to your account or create a new one
+              {activeTab === 'login' 
+                ? 'Sign in to access your dashboard' 
+                : 'Administrator registration only'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger value="signup">
+                  <ShieldCheck className="mr-1 h-4 w-4" />
+                  Admin Setup
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="login" className="space-y-4 pt-4">
@@ -203,6 +251,10 @@ export default function Auth() {
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-4 pt-4">
+                <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+                  <ShieldCheck className="mb-1 inline h-4 w-4 text-primary" />
+                  {' '}Only pre-authorized administrator emails can register.
+                </div>
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
@@ -221,7 +273,7 @@ export default function Auth() {
                     <Input
                       id="signup-email"
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder="admin@company.com"
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
                       required
@@ -256,10 +308,10 @@ export default function Auth() {
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
+                        Creating admin account...
                       </>
                     ) : (
-                      'Create Account'
+                      'Create Admin Account'
                     )}
                   </Button>
                 </form>

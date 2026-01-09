@@ -44,30 +44,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (userId: string) => {
     try {
-      // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      // Fetch profile and role in parallel
+      const [profileResult, roleResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle(),
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .maybeSingle()
+      ]);
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-      } else if (profileData) {
-        setProfile(profileData);
+      if (profileResult.error) {
+        console.error('Error fetching profile:', profileResult.error);
+      } else if (profileResult.data) {
+        setProfile(profileResult.data);
       }
 
-      // Fetch role
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (roleError) {
-        console.error('Error fetching role:', roleError);
-      } else if (roleData) {
-        setRole(roleData.role as AppRole);
+      if (roleResult.error) {
+        console.error('Error fetching role:', roleResult.error);
+      } else if (roleResult.data) {
+        setRole(roleResult.data.role as AppRole);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
