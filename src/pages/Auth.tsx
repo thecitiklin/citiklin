@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, ShieldCheck } from 'lucide-react';
 import { z } from 'zod';
+import { PasswordStrengthIndicator, getPasswordStrength } from '@/components/auth/PasswordStrengthIndicator';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -19,7 +20,12 @@ const loginSchema = z.object({
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain an uppercase letter')
+    .regex(/[a-z]/, 'Password must contain a lowercase letter')
+    .regex(/\d/, 'Password must contain a number')
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain a special character'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -103,17 +109,33 @@ export default function Auth() {
       });
       return;
     }
+    // Ensure password meets strength requirements
+    if (getPasswordStrength(signupPassword) < 5) {
+      toast({
+        variant: 'destructive',
+        title: 'Weak Password',
+        description: 'Please create a stronger password meeting all requirements.',
+      });
+      return;
+    }
 
     setIsLoading(true);
     
-    // Check if email is authorized for registration
-    const { data: adminEmail, error: checkError } = await supabase
-      .from('admin_emails')
-      .select('email, used')
-      .eq('email', signupEmail.toLowerCase())
-      .maybeSingle();
+    // Check if email is authorized for registration (admin emails or invitations)
+    const [adminEmailResult, invitationResult] = await Promise.all([
+      supabase
+        .from('admin_emails')
+        .select('email, used')
+        .eq('email', signupEmail.toLowerCase())
+        .maybeSingle(),
+      supabase
+        .from('user_invitations')
+        .select('email, used, expires_at, role')
+        .eq('email', signupEmail.toLowerCase())
+        .maybeSingle()
+    ]);
     
-    if (checkError) {
+    if (adminEmailResult.error || invitationResult.error) {
       setIsLoading(false);
       toast({
         variant: 'destructive',
@@ -123,17 +145,11 @@ export default function Auth() {
       return;
     }
     
-    if (!adminEmail) {
-      setIsLoading(false);
-      toast({
-        variant: 'destructive',
-        title: 'Registration Restricted',
-        description: 'Only authorized administrator emails can register. Contact your system administrator.',
-      });
-      return;
-    }
+    const adminEmail = adminEmailResult.data;
+    const invitation = invitationResult.data;
     
-    if (adminEmail.used) {
+    // Check if already used
+    if (adminEmail?.used) {
       setIsLoading(false);
       toast({
         variant: 'destructive',
@@ -142,6 +158,40 @@ export default function Auth() {
       });
       setActiveTab('login');
       setLoginEmail(signupEmail);
+      return;
+    }
+    
+    if (invitation?.used) {
+      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Already Registered',
+        description: 'This invitation has been used. Please sign in instead.',
+      });
+      setActiveTab('login');
+      setLoginEmail(signupEmail);
+      return;
+    }
+    
+    // Check if invitation is expired
+    if (invitation && new Date(invitation.expires_at) < new Date()) {
+      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Invitation Expired',
+        description: 'This invitation has expired. Please contact an administrator for a new one.',
+      });
+      return;
+    }
+    
+    // If neither admin email nor valid invitation found
+    if (!adminEmail && !invitation) {
+      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Registration Restricted',
+        description: 'You need an invitation to register. Contact your system administrator.',
+      });
       return;
     }
 
@@ -155,9 +205,12 @@ export default function Auth() {
         description: result.error || 'Unable to create account',
       });
     } else {
+      const roleMessage = adminEmail 
+        ? 'You have been registered as an administrator.' 
+        : `You have been registered as ${invitation?.role}.`;
       toast({
-        title: 'Admin Account Created!',
-        description: 'Welcome to Citi Klin. You have been registered as an administrator.',
+        title: 'Account Created!',
+        description: `Welcome to Citi Klin. ${roleMessage}`,
       });
       // Navigation handled by useEffect when role is loaded
     }
@@ -253,7 +306,7 @@ export default function Auth() {
               <TabsContent value="signup" className="space-y-4 pt-4">
                 <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
                   <ShieldCheck className="mb-1 inline h-4 w-4 text-primary" />
-                  {' '}Only pre-authorized administrator emails can register.
+                  {' '}Registration requires an administrator invitation or pre-authorization.
                 </div>
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
@@ -291,6 +344,7 @@ export default function Auth() {
                       required
                       disabled={isLoading}
                     />
+                    <PasswordStrengthIndicator password={signupPassword} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-confirm">Confirm Password</Label>
