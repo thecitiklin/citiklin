@@ -77,10 +77,13 @@ export default function Auth() {
     setIsLoading(false);
 
     if (!result.success) {
+      const isInvalidCredentials = result.error?.toLowerCase().includes('invalid');
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: result.error || 'Unable to sign in',
+        description: isInvalidCredentials 
+          ? 'Invalid email or password. Forgot your password? Click the link below to reset it.'
+          : (result.error || 'Unable to sign in'),
       });
     } else {
       toast({
