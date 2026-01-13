@@ -47,6 +47,7 @@ import HelpCenterPage from "./pages/public/HelpCenterPage";
 import UserManagement from "./pages/admin/UserManagement";
 import DepartmentManagement from "./pages/admin/DepartmentManagement";
 import ApiKeysManagement from "./pages/admin/ApiKeysManagement";
+import ContentManagement from "./pages/admin/ContentManagement";
 import AccountSettings from "./pages/settings/AccountSettings";
 
 const queryClient = new QueryClient();
@@ -115,6 +116,7 @@ const App = () => (
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
               <Route path="/admin/departments" element={<ProtectedRoute allowedRoles={['admin']}><DepartmentManagement /></ProtectedRoute>} />
               <Route path="/admin/api-keys" element={<ProtectedRoute allowedRoles={['admin']}><ApiKeysManagement /></ProtectedRoute>} />
+              <Route path="/admin/cms" element={<ProtectedRoute allowedRoles={['admin']}><ContentManagement /></ProtectedRoute>} />
               
               {/* Settings */}
               <Route path="/settings" element={<AccountSettings />} />
