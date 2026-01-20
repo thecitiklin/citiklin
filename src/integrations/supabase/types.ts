@@ -296,39 +296,122 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_records: {
+        Row: {
+          cost: number | null
+          created_at: string | null
+          date: string | null
+          description: string | null
+          id: string
+          notes: string | null
+          performed_by: string | null
+          type: string
+          updated_at: string | null
+          vehicle_id: string | null
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string | null
+          date?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          type: string
+          updated_at?: string | null
+          vehicle_id?: string | null
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string | null
+          date?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          type?: string
+          updated_at?: string | null
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_records_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
+          bank_account: string | null
+          bank_name: string | null
+          card_last_four: string | null
+          cheque_number: string | null
           created_at: string
           customer_id: string | null
+          due_status: string | null
+          entry_type: string | null
           id: string
           invoice_id: string | null
+          mpesa_receipt: string | null
           notes: string | null
+          payment_date: string | null
           payment_method: string
+          payment_time: string | null
+          payment_type: string | null
+          recorded_by: string | null
+          reference_number: string | null
           status: string
           transaction_id: string | null
           updated_at: string
         }
         Insert: {
           amount: number
+          bank_account?: string | null
+          bank_name?: string | null
+          card_last_four?: string | null
+          cheque_number?: string | null
           created_at?: string
           customer_id?: string | null
+          due_status?: string | null
+          entry_type?: string | null
           id?: string
           invoice_id?: string | null
+          mpesa_receipt?: string | null
           notes?: string | null
+          payment_date?: string | null
           payment_method: string
+          payment_time?: string | null
+          payment_type?: string | null
+          recorded_by?: string | null
+          reference_number?: string | null
           status?: string
           transaction_id?: string | null
           updated_at?: string
         }
         Update: {
           amount?: number
+          bank_account?: string | null
+          bank_name?: string | null
+          card_last_four?: string | null
+          cheque_number?: string | null
           created_at?: string
           customer_id?: string | null
+          due_status?: string | null
+          entry_type?: string | null
           id?: string
           invoice_id?: string | null
+          mpesa_receipt?: string | null
           notes?: string | null
+          payment_date?: string | null
           payment_method?: string
+          payment_time?: string | null
+          payment_type?: string | null
+          recorded_by?: string | null
+          reference_number?: string | null
           status?: string
           transaction_id?: string | null
           updated_at?: string
@@ -346,6 +429,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -503,6 +593,45 @@ export type Database = {
           },
         ]
       }
+      reviews: {
+        Row: {
+          comment: string
+          created_at: string | null
+          email: string | null
+          helpful_count: number | null
+          id: string
+          is_approved: boolean | null
+          name: string
+          rating: number
+          service: string
+          updated_at: string | null
+        }
+        Insert: {
+          comment: string
+          created_at?: string | null
+          email?: string | null
+          helpful_count?: number | null
+          id?: string
+          is_approved?: boolean | null
+          name: string
+          rating: number
+          service: string
+          updated_at?: string | null
+        }
+        Update: {
+          comment?: string
+          created_at?: string | null
+          email?: string | null
+          helpful_count?: number | null
+          id?: string
+          is_approved?: boolean | null
+          name?: string
+          rating?: number
+          service?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       site_content: {
         Row: {
           content: Json
@@ -532,6 +661,60 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: string | null
+          created_at: string | null
+          customer_id: string | null
+          description: string | null
+          id: string
+          priority: string | null
+          status: string | null
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
