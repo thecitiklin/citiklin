@@ -20,7 +20,7 @@ export type Invoice = {
   projects?: { name: string } | null;
 };
 
-export type InvoiceInsert = Omit<Invoice, 'id' | 'created_at' | 'updated_at' | 'customers' | 'projects'>;
+export type InvoiceInsert = Omit<Invoice, 'id' | 'created_at' | 'updated_at' | 'customers' | 'projects' | 'paid_at'> & { paid_at?: string | null };
 export type InvoiceUpdate = Partial<InvoiceInsert>;
 
 export const useInvoices = () => {
