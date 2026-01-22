@@ -10,13 +10,13 @@ import {
 } from '@/components/ui/select';
 import {
   TrendingUp,
-  TrendingDown,
   DollarSign,
   Users,
   Briefcase,
   Star,
   Download,
   Calendar,
+  Loader2,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -31,14 +31,70 @@ import {
   Cell,
   BarChart,
   Bar,
-  Legend,
 } from 'recharts';
-import { analyticsData } from '@/data/salesData';
+import { usePayments } from '@/hooks/usePayments';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useProjects } from '@/hooks/useProjects';
+import { useReviews } from '@/hooks/useReviews';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--warning))', 'hsl(var(--secondary))', 'hsl(var(--muted))'];
 
 export default function AnalyticsDashboard() {
-  const { revenue, projects, customers, expenses, performance } = analyticsData;
+  const { data: payments = [], isLoading: paymentsLoading } = usePayments();
+  const { data: customers = [], isLoading: customersLoading } = useCustomers();
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: reviews = [], isLoading: reviewsLoading } = useReviews();
+
+  const isLoading = paymentsLoading || customersLoading || projectsLoading || reviewsLoading;
+
+  // Calculate metrics from real data
+  const totalRevenue = payments
+    .filter((p) => p.status === 'completed')
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const totalCustomers = customers.length;
+  const activeProjects = projects.filter((p) => p.status === 'active').length;
+  const completedProjects = projects.filter((p) => p.status === 'completed').length;
+
+  const avgRating = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    : 0;
+
+  // Generate monthly revenue data from payments
+  const monthlyRevenue = Array.from({ length: 6 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (5 - i));
+    const month = date.toLocaleString('default', { month: 'short' });
+    const monthPayments = payments.filter((p) => {
+      const paymentDate = new Date(p.created_at);
+      return paymentDate.getMonth() === date.getMonth() && 
+             paymentDate.getFullYear() === date.getFullYear() &&
+             p.status === 'completed';
+    });
+    const value = monthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    return { month, value };
+  });
+
+  // Calculate expense categories (placeholder - would need expense tracking)
+  const expenseCategories = [
+    { name: 'Salaries', value: totalRevenue * 0.4 },
+    { name: 'Equipment', value: totalRevenue * 0.2 },
+    { name: 'Transport', value: totalRevenue * 0.15 },
+    { name: 'Supplies', value: totalRevenue * 0.15 },
+    { name: 'Other', value: totalRevenue * 0.1 },
+  ];
+
+  const totalExpenses = expenseCategories.reduce((sum, c) => sum + c.value, 0);
+  const netProfit = totalRevenue - totalExpenses;
+  const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100) : 0;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -74,10 +130,10 @@ export default function AnalyticsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">KES {(revenue.total / 1000000).toFixed(2)}M</p>
+                <p className="text-2xl font-bold">KES {(totalRevenue / 1000000).toFixed(2)}M</p>
                 <div className="flex items-center gap-1 text-sm text-accent">
                   <TrendingUp className="h-4 w-4" />
-                  <span>+{revenue.growth}%</span>
+                  <span>From payments</span>
                 </div>
               </div>
               <div className="rounded-full bg-primary/10 p-3">
@@ -91,10 +147,10 @@ export default function AnalyticsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Customers</p>
-                <p className="text-2xl font-bold">{customers.total}</p>
+                <p className="text-2xl font-bold">{totalCustomers}</p>
                 <div className="flex items-center gap-1 text-sm text-accent">
                   <TrendingUp className="h-4 w-4" />
-                  <span>+{customers.new} new</span>
+                  <span>Active accounts</span>
                 </div>
               </div>
               <div className="rounded-full bg-accent/10 p-3">
@@ -108,8 +164,8 @@ export default function AnalyticsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Projects Completed</p>
-                <p className="text-2xl font-bold">{projects.completed}/{projects.total}</p>
-                <p className="text-sm text-muted-foreground">{projects.active} active</p>
+                <p className="text-2xl font-bold">{completedProjects}/{projects.length}</p>
+                <p className="text-sm text-muted-foreground">{activeProjects} active</p>
               </div>
               <div className="rounded-full bg-warning/10 p-3">
                 <Briefcase className="h-6 w-6 text-warning" />
@@ -121,9 +177,9 @@ export default function AnalyticsDashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Customer Satisfaction</p>
-                <p className="text-2xl font-bold">{performance.customerSatisfaction}/5</p>
-                <p className="text-sm text-muted-foreground">{performance.onTimeDelivery}% on-time</p>
+                <p className="text-sm text-muted-foreground">Customer Rating</p>
+                <p className="text-2xl font-bold">{avgRating.toFixed(1)}/5</p>
+                <p className="text-sm text-muted-foreground">{reviews.length} reviews</p>
               </div>
               <div className="rounded-full bg-secondary/10 p-3">
                 <Star className="h-6 w-6 text-secondary-foreground" />
@@ -149,7 +205,7 @@ export default function AnalyticsDashboard() {
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={revenue.monthly}>
+                    <AreaChart data={monthlyRevenue}>
                       <defs>
                         <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
@@ -178,19 +234,19 @@ export default function AnalyticsDashboard() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Revenue</span>
-                    <span className="font-bold">KES {revenue.total.toLocaleString()}</span>
+                    <span className="font-bold">KES {totalRevenue.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Expenses</span>
-                    <span className="font-bold">KES {expenses.total.toLocaleString()}</span>
+                    <span className="text-muted-foreground">Est. Expenses</span>
+                    <span className="font-bold">KES {totalExpenses.toLocaleString()}</span>
                   </div>
                   <div className="border-t pt-3 flex justify-between">
                     <span className="text-muted-foreground">Net Profit</span>
-                    <span className="font-bold text-accent">KES {(revenue.total - expenses.total).toLocaleString()}</span>
+                    <span className="font-bold text-accent">KES {netProfit.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Profit Margin</span>
-                    <span className="font-bold">{(((revenue.total - expenses.total) / revenue.total) * 100).toFixed(1)}%</span>
+                    <span className="font-bold">{profitMargin.toFixed(1)}%</span>
                   </div>
                 </div>
               </CardContent>
@@ -209,7 +265,7 @@ export default function AnalyticsDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={expenses.categories}
+                        data={expenseCategories}
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
@@ -218,7 +274,7 @@ export default function AnalyticsDashboard() {
                         dataKey="value"
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
-                        {expenses.categories.map((_, index) => (
+                        {expenseCategories.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -239,7 +295,7 @@ export default function AnalyticsDashboard() {
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={expenses.categories} layout="vertical">
+                    <BarChart data={expenseCategories} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis type="number" tickFormatter={(v) => `${v / 1000}K`} />
                       <YAxis dataKey="name" type="category" width={80} />
@@ -260,13 +316,13 @@ export default function AnalyticsDashboard() {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-primary">{performance.customerSatisfaction}</div>
+                <div className="text-4xl font-bold text-primary">{avgRating.toFixed(1)}</div>
                 <p className="text-sm text-muted-foreground mt-2">Customer Satisfaction Score</p>
                 <div className="flex justify-center gap-1 mt-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                       key={star}
-                      className={`h-5 w-5 ${star <= Math.round(performance.customerSatisfaction) ? 'fill-warning text-warning' : 'text-muted'}`}
+                      className={`h-5 w-5 ${star <= Math.round(avgRating) ? 'fill-warning text-warning' : 'text-muted'}`}
                     />
                   ))}
                 </div>
@@ -274,14 +330,16 @@ export default function AnalyticsDashboard() {
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-accent">{performance.onTimeDelivery}%</div>
-                <p className="text-sm text-muted-foreground mt-2">On-Time Delivery Rate</p>
+                <div className="text-4xl font-bold text-accent">
+                  {projects.length > 0 ? Math.round((completedProjects / projects.length) * 100) : 0}%
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">Project Completion Rate</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-warning">{performance.repeatCustomers}%</div>
-                <p className="text-sm text-muted-foreground mt-2">Repeat Customer Rate</p>
+                <div className="text-4xl font-bold text-warning">{reviews.length}</div>
+                <p className="text-sm text-muted-foreground mt-2">Total Reviews Received</p>
               </CardContent>
             </Card>
           </div>

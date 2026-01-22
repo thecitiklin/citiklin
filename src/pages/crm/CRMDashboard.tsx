@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Phone, Mail, Building, User, Tag, MoreVertical } from 'lucide-react';
+import { Plus, Search, Phone, Mail, Building, User, Tag, MoreVertical, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,27 +19,44 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockContacts, mockLeads } from '@/data/salesData';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useLeads } from '@/hooks/useLeads';
+import { useVendors } from '@/hooks/useVendors';
 
-const typeColors: Record<string, string> = {
-  customer: 'bg-accent text-accent-foreground',
-  lead: 'bg-primary text-primary-foreground',
-  partner: 'bg-warning text-warning-foreground',
-  vendor: 'bg-secondary text-secondary-foreground',
+const statusColors: Record<string, string> = {
+  active: 'bg-accent text-accent-foreground',
+  inactive: 'bg-muted text-muted-foreground',
+  pending: 'bg-warning text-warning-foreground',
 };
 
 export default function CRMDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  const filteredContacts = mockContacts.filter((contact) => {
+  const { data: customers = [], isLoading: customersLoading } = useCustomers();
+  const { data: leads = [], isLoading: leadsLoading } = useLeads();
+  const { data: vendors = [], isLoading: vendorsLoading } = useVendors();
+
+  const isLoading = customersLoading || leadsLoading || vendorsLoading;
+
+  const filteredCustomers = customers.filter((customer) => {
     const matchesSearch =
-      contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.company?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all' || contact.type === typeFilter;
+      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.company?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter === 'all' || customer.status === typeFilter;
     return matchesSearch && matchesType;
   });
+
+  const activeLeads = leads.filter((l) => !['won', 'lost'].includes(l.status || ''));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -64,9 +81,7 @@ export default function CRMDashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Customers</p>
-                <p className="text-2xl font-bold">
-                  {mockContacts.filter((c) => c.type === 'customer').length}
-                </p>
+                <p className="text-2xl font-bold">{customers.length}</p>
               </div>
             </div>
           </CardContent>
@@ -79,7 +94,7 @@ export default function CRMDashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Active Leads</p>
-                <p className="text-2xl font-bold">{mockLeads.filter((l) => !['won', 'lost'].includes(l.status)).length}</p>
+                <p className="text-2xl font-bold">{activeLeads.length}</p>
               </div>
             </div>
           </CardContent>
@@ -91,10 +106,8 @@ export default function CRMDashboard() {
                 <Building className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Partners</p>
-                <p className="text-2xl font-bold">
-                  {mockContacts.filter((c) => c.type === 'partner').length}
-                </p>
+                <p className="text-sm text-muted-foreground">Total Leads</p>
+                <p className="text-2xl font-bold">{leads.length}</p>
               </div>
             </div>
           </CardContent>
@@ -107,9 +120,7 @@ export default function CRMDashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Vendors</p>
-                <p className="text-2xl font-bold">
-                  {mockContacts.filter((c) => c.type === 'vendor').length}
-                </p>
+                <p className="text-2xl font-bold">{vendors.length}</p>
               </div>
             </div>
           </CardContent>
@@ -138,14 +149,13 @@ export default function CRMDashboard() {
                 </div>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Type" />
+                    <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="customer">Customers</SelectItem>
-                    <SelectItem value="lead">Leads</SelectItem>
-                    <SelectItem value="partner">Partners</SelectItem>
-                    <SelectItem value="vendor">Vendors</SelectItem>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -154,7 +164,7 @@ export default function CRMDashboard() {
 
           {/* Contacts Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredContacts.map((contact) => (
+            {filteredCustomers.map((contact) => (
               <Card key={contact.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -166,8 +176,8 @@ export default function CRMDashboard() {
                       </Avatar>
                       <div>
                         <CardTitle className="text-base">{contact.name}</CardTitle>
-                        {contact.position && (
-                          <p className="text-sm text-muted-foreground">{contact.position}</p>
+                        {contact.company && (
+                          <p className="text-sm text-muted-foreground">{contact.company}</p>
                         )}
                       </div>
                     </div>
@@ -187,7 +197,9 @@ export default function CRMDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Badge className={typeColors[contact.type]}>{contact.type}</Badge>
+                  <Badge className={statusColors[contact.status] || statusColors.active}>
+                    {contact.status}
+                  </Badge>
 
                   {contact.company && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -201,32 +213,31 @@ export default function CRMDashboard() {
                       <Mail className="h-4 w-4" />
                       <span className="truncate">{contact.email}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      <span>{contact.phone}</span>
-                    </div>
+                    {contact.phone && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                        <span>{contact.phone}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {contact.tags.length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Tag className="h-3 w-3 text-muted-foreground" />
-                      {contact.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  {contact.lastInteraction && (
-                    <p className="text-xs text-muted-foreground">
-                      Last contact: {contact.lastInteraction}
-                    </p>
-                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Added: {new Date(contact.created_at).toLocaleDateString()}
+                  </p>
                 </CardContent>
               </Card>
             ))}
           </div>
+
+          {filteredCustomers.length === 0 && (
+            <Card>
+              <CardContent className="py-8">
+                <p className="text-center text-muted-foreground">
+                  No contacts found matching your criteria.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="recent" className="space-y-4">

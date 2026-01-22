@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Shield,
   Gauge,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,17 +26,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockVehicles, mockMaintenanceRecords } from '@/data/mockData';
-import type { VehicleStatus, VehicleType } from '@/types/fleet';
+import { useVehicles } from '@/hooks/useVehicles';
+import { useMaintenanceRecords } from '@/hooks/useMaintenanceRecords';
 
-const statusColors: Record<VehicleStatus, string> = {
+const statusColors: Record<string, string> = {
   available: 'bg-accent text-accent-foreground',
   'in-use': 'bg-primary text-primary-foreground',
   maintenance: 'bg-warning text-warning-foreground',
   'out-of-service': 'bg-destructive text-destructive-foreground',
 };
 
-const typeIcons: Record<VehicleType, string> = {
+const typeIcons: Record<string, string> = {
   van: '🚐',
   truck: '🚛',
   car: '🚗',
@@ -44,8 +45,21 @@ const typeIcons: Record<VehicleType, string> = {
 
 export default function VehicleDetails() {
   const { id } = useParams();
-  const vehicle = mockVehicles.find((v) => v.id === id);
-  const maintenanceRecords = mockMaintenanceRecords.filter((m) => m.vehicleId === id);
+  const { data: vehicles = [], isLoading: vehiclesLoading } = useVehicles();
+  const { data: maintenanceRecords = [], isLoading: maintenanceLoading } = useMaintenanceRecords();
+
+  const vehicle = vehicles.find((v) => v.id === id);
+  const vehicleMaintenanceRecords = maintenanceRecords.filter((m) => m.vehicle_id === id);
+
+  const isLoading = vehiclesLoading || maintenanceLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!vehicle) {
     return (
@@ -60,15 +74,12 @@ export default function VehicleDetails() {
     );
   }
 
-  const daysUntilMaintenance = Math.ceil(
-    (new Date(vehicle.nextMaintenanceDate).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
-
-  const daysUntilInsurance = Math.ceil(
-    (new Date(vehicle.insuranceExpiry).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
+  const daysUntilMaintenance = vehicle.next_maintenance
+    ? Math.ceil(
+        (new Date(vehicle.next_maintenance).getTime() - new Date().getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
+    : 999;
 
   return (
     <div className="space-y-6">
@@ -80,10 +91,10 @@ export default function VehicleDetails() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <span className="text-4xl">{typeIcons[vehicle.type]}</span>
+          <span className="text-4xl">{typeIcons[vehicle.vehicle_type] || '🚗'}</span>
           <div>
             <h1 className="text-2xl font-bold text-foreground">{vehicle.name}</h1>
-            <p className="text-muted-foreground">{vehicle.plateNumber}</p>
+            <p className="text-muted-foreground">{vehicle.license_plate}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -98,7 +109,7 @@ export default function VehicleDetails() {
       </div>
 
       {/* Status Badge */}
-      <Badge className={statusColors[vehicle.status]}>
+      <Badge className={statusColors[vehicle.status] || statusColors.available}>
         {vehicle.status.replace('-', ' ')}
       </Badge>
 
@@ -112,7 +123,7 @@ export default function VehicleDetails() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Mileage</p>
-                <p className="text-xl font-bold">{vehicle.mileage.toLocaleString()} km</p>
+                <p className="text-xl font-bold">{(vehicle.mileage || 0).toLocaleString()} km</p>
               </div>
             </div>
           </CardContent>
@@ -124,8 +135,8 @@ export default function VehicleDetails() {
                 <Fuel className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Fuel Level</p>
-                <p className="text-xl font-bold">{vehicle.fuelLevel}%</p>
+                <p className="text-sm text-muted-foreground">Fuel Type</p>
+                <p className="text-xl font-bold capitalize">{vehicle.fuel_type || 'N/A'}</p>
               </div>
             </div>
           </CardContent>
@@ -146,7 +157,11 @@ export default function VehicleDetails() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Next Service</p>
-                <p className="text-xl font-bold">{daysUntilMaintenance} days</p>
+                <p className="text-xl font-bold">
+                  {vehicle.next_maintenance
+                    ? `${daysUntilMaintenance} days`
+                    : 'Not scheduled'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -154,20 +169,12 @@ export default function VehicleDetails() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div
-                className={`rounded-full p-3 ${
-                  daysUntilInsurance <= 30 ? 'bg-destructive/10' : 'bg-secondary/10'
-                }`}
-              >
-                <Shield
-                  className={`h-5 w-5 ${
-                    daysUntilInsurance <= 30 ? 'text-destructive' : 'text-secondary-foreground'
-                  }`}
-                />
+              <div className="rounded-full bg-secondary/10 p-3">
+                <Shield className="h-5 w-5 text-secondary-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Insurance Expires</p>
-                <p className="text-xl font-bold">{daysUntilInsurance} days</p>
+                <p className="text-sm text-muted-foreground">Vehicle Type</p>
+                <p className="text-xl font-bold capitalize">{vehicle.vehicle_type}</p>
               </div>
             </div>
           </CardContent>
@@ -193,19 +200,19 @@ export default function VehicleDetails() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Type</p>
-                    <p className="font-medium capitalize">{vehicle.type}</p>
+                    <p className="font-medium capitalize">{vehicle.vehicle_type}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Plate Number</p>
-                    <p className="font-medium">{vehicle.plateNumber}</p>
+                    <p className="font-medium">{vehicle.license_plate}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Capacity</p>
-                    <p className="font-medium">{vehicle.capacity}</p>
+                    <p className="text-sm text-muted-foreground">Fuel Type</p>
+                    <p className="font-medium capitalize">{vehicle.fuel_type || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Mileage</p>
-                    <p className="font-medium">{vehicle.mileage.toLocaleString()} km</p>
+                    <p className="font-medium">{(vehicle.mileage || 0).toLocaleString()} km</p>
                   </div>
                 </div>
               </CardContent>
@@ -216,37 +223,20 @@ export default function VehicleDetails() {
                 <CardTitle>Current Status</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Fuel Level */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Fuel className="h-4 w-4 text-muted-foreground" />
-                      <span>Fuel Level</span>
-                    </div>
-                    <span className="font-medium">{vehicle.fuelLevel}%</span>
+                <div className="flex items-center gap-3">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Assigned Driver</p>
+                    <p className="font-medium">{vehicle.assigned_driver || 'Not assigned'}</p>
                   </div>
-                  <Progress
-                    value={vehicle.fuelLevel}
-                    className={`h-3 ${vehicle.fuelLevel < 25 ? '[&>div]:bg-destructive' : ''}`}
-                  />
                 </div>
 
-                {vehicle.currentDriverName && (
+                {vehicle.notes && (
                   <div className="flex items-center gap-3">
-                    <User className="h-4 w-4 text-muted-foreground" />
+                    <FileText className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Current Driver</p>
-                      <p className="font-medium">{vehicle.currentDriverName}</p>
-                    </div>
-                  </div>
-                )}
-
-                {vehicle.location && (
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Location</p>
-                      <p className="font-medium">{vehicle.location}</p>
+                      <p className="text-sm text-muted-foreground">Notes</p>
+                      <p className="font-medium">{vehicle.notes}</p>
                     </div>
                   </div>
                 )}
@@ -265,21 +255,23 @@ export default function VehicleDetails() {
                   <Calendar className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Last Maintenance</p>
-                    <p className="font-medium">{vehicle.lastMaintenanceDate}</p>
+                    <p className="font-medium">{vehicle.last_maintenance || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Wrench className="h-5 w-5 text-warning" />
                   <div>
                     <p className="text-sm text-muted-foreground">Next Maintenance</p>
-                    <p className="font-medium">{vehicle.nextMaintenanceDate}</p>
+                    <p className="font-medium">{vehicle.next_maintenance || 'Not scheduled'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Shield className="h-5 w-5 text-primary" />
+                  <Calendar className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Insurance Expiry</p>
-                    <p className="font-medium">{vehicle.insuranceExpiry}</p>
+                    <p className="text-sm text-muted-foreground">Added</p>
+                    <p className="font-medium">
+                      {new Date(vehicle.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -294,7 +286,7 @@ export default function VehicleDetails() {
               <Button>Add Record</Button>
             </CardHeader>
             <CardContent>
-              {maintenanceRecords.length > 0 ? (
+              {vehicleMaintenanceRecords.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -306,17 +298,17 @@ export default function VehicleDetails() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {maintenanceRecords.map((record) => (
+                    {vehicleMaintenanceRecords.map((record) => (
                       <TableRow key={record.id}>
-                        <TableCell>{record.date}</TableCell>
+                        <TableCell>{record.date || 'N/A'}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="capitalize">
                             {record.type}
                           </Badge>
                         </TableCell>
-                        <TableCell>{record.description}</TableCell>
-                        <TableCell>{record.performedBy}</TableCell>
-                        <TableCell>KES {record.cost.toLocaleString()}</TableCell>
+                        <TableCell>{record.description || 'N/A'}</TableCell>
+                        <TableCell>{record.performed_by || 'N/A'}</TableCell>
+                        <TableCell>KES {(record.cost || 0).toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
