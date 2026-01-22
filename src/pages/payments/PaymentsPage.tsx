@@ -196,12 +196,12 @@ export default function PaymentsPage() {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="invoice">Invoice (Optional)</Label>
-        <Select value={formData.invoice_id} onValueChange={(v) => setFormData({ ...formData, invoice_id: v })}>
+        <Select value={formData.invoice_id || "none"} onValueChange={(v) => setFormData({ ...formData, invoice_id: v === "none" ? "" : v })}>
           <SelectTrigger>
             <SelectValue placeholder="Select invoice" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">No Invoice</SelectItem>
+            <SelectItem value="none">No Invoice</SelectItem>
             {invoices.map((invoice) => (
               <SelectItem key={invoice.id} value={invoice.id}>{invoice.invoice_number}</SelectItem>
             ))}
