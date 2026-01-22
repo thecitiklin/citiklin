@@ -216,12 +216,12 @@ export default function InvoicingPage() {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="project">Project (Optional)</Label>
-        <Select value={formData.project_id} onValueChange={(v) => setFormData({ ...formData, project_id: v })}>
+        <Select value={formData.project_id || "none"} onValueChange={(v) => setFormData({ ...formData, project_id: v === "none" ? "" : v })}>
           <SelectTrigger>
             <SelectValue placeholder="Select project" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">No Project</SelectItem>
+            <SelectItem value="none">No Project</SelectItem>
             {projects.map((project) => (
               <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
             ))}
