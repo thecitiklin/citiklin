@@ -15,8 +15,11 @@ export type Review = {
   updated_at: string;
 };
 
-export type ReviewInsert = Omit<Review, 'id' | 'created_at' | 'updated_at' | 'helpful_count' | 'is_approved'>;
-export type ReviewUpdate = Partial<ReviewInsert> & { is_approved?: boolean };
+export type ReviewInsert = Omit<Review, 'id' | 'created_at' | 'updated_at'> & { 
+  helpful_count?: number;
+  is_approved?: boolean;
+};
+export type ReviewUpdate = Partial<ReviewInsert> & { is_approved?: boolean; helpful_count?: number };
 
 export const useReviews = (approvedOnly = true) => {
   return useQuery({

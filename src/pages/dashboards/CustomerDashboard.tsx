@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, CreditCard, Star, Headphones } from 'lucide-react';
+import { Calendar, CreditCard, Star, Headphones, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,17 +8,10 @@ import {
   getStatusType,
   QuickActions,
 } from '@/components/dashboard';
-
-const upcomingBookings = [
-  { id: 1, service: 'Regular Home Cleaning', date: 'Dec 15, 2024', time: '10:00 AM', status: 'confirmed' },
-  { id: 2, service: 'Deep Kitchen Clean', date: 'Dec 22, 2024', time: '2:00 PM', status: 'pending' },
-];
-
-const recentPayments = [
-  { id: 1, amount: 'KES 5,500', date: 'Dec 8, 2024', status: 'completed' },
-  { id: 2, amount: 'KES 3,200', date: 'Nov 25, 2024', status: 'completed' },
-  { id: 3, amount: 'KES 8,000', date: 'Nov 10, 2024', status: 'completed' },
-];
+import { useProjects } from '@/hooks/useProjects';
+import { usePayments } from '@/hooks/usePayments';
+import { useSupportTickets } from '@/hooks/useSupportTickets';
+import { format, parseISO } from 'date-fns';
 
 const quickActions = [
   { label: 'Book Service', icon: Calendar, href: '/book-service' },
@@ -29,6 +22,50 @@ const quickActions = [
 
 export default function CustomerDashboard() {
   const { profile } = useAuth();
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: payments = [], isLoading: paymentsLoading } = usePayments();
+  const { data: tickets = [], isLoading: ticketsLoading } = useSupportTickets();
+
+  const isLoading = projectsLoading || paymentsLoading || ticketsLoading;
+
+  // Calculate real stats
+  const activeBookings = projects.filter(p => p.status === 'active' || p.status === 'planning').length;
+  const totalSpent = payments
+    .filter(p => p.status === 'completed')
+    .reduce((sum, p) => sum + p.amount, 0);
+  const completedServices = projects.filter(p => p.status === 'completed').length;
+  const openTickets = tickets.filter(t => t.status === 'open' || t.status === 'pending').length;
+
+  // Get upcoming bookings (active projects)
+  const upcomingBookings = projects
+    .filter(p => p.status === 'active' || p.status === 'planning')
+    .slice(0, 3)
+    .map(p => ({
+      id: p.id,
+      service: p.name,
+      date: p.start_date ? format(parseISO(p.start_date), 'MMM d, yyyy') : 'TBD',
+      time: 'Scheduled',
+      status: p.status === 'active' ? 'confirmed' : 'pending',
+    }));
+
+  // Get recent payments
+  const recentPayments = payments
+    .filter(p => p.status === 'completed')
+    .slice(0, 3)
+    .map(p => ({
+      id: p.id,
+      amount: `KES ${p.amount.toLocaleString()}`,
+      date: format(parseISO(p.created_at), 'MMM d, yyyy'),
+      status: 'completed',
+    }));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -42,10 +79,10 @@ export default function CustomerDashboard() {
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <KPICard title="Active Bookings" value="2" icon={Calendar} />
-        <KPICard title="Total Spent" value="KES 45,200" icon={CreditCard} />
-        <KPICard title="Services Used" value="12" icon={Star} />
-        <KPICard title="Support Tickets" value="0" icon={Headphones} />
+        <KPICard title="Active Bookings" value={String(activeBookings)} icon={Calendar} />
+        <KPICard title="Total Spent" value={`KES ${(totalSpent / 1000).toFixed(0)}K`} icon={CreditCard} />
+        <KPICard title="Services Used" value={String(completedServices)} icon={Star} />
+        <KPICard title="Support Tickets" value={String(openTickets)} icon={Headphones} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -57,20 +94,24 @@ export default function CustomerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className="flex items-center justify-between rounded-lg border border-border p-4"
-                >
-                  <div>
-                    <p className="font-medium">{booking.service}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {booking.date} at {booking.time}
-                    </p>
+              {upcomingBookings.length > 0 ? (
+                upcomingBookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="flex items-center justify-between rounded-lg border border-border p-4"
+                  >
+                    <div>
+                      <p className="font-medium">{booking.service}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {booking.date} - {booking.time}
+                      </p>
+                    </div>
+                    <StatusBadge status={booking.status} type={getStatusType(booking.status)} />
                   </div>
-                  <StatusBadge status={booking.status} type={getStatusType(booking.status)} />
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No upcoming bookings</p>
+              )}
               <Button variant="outline" className="w-full">
                 View All Bookings
               </Button>
@@ -86,18 +127,22 @@ export default function CustomerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentPayments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0"
-                >
-                  <div>
-                    <p className="font-medium">{payment.amount}</p>
-                    <p className="text-sm text-muted-foreground">{payment.date}</p>
+              {recentPayments.length > 0 ? (
+                recentPayments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0"
+                  >
+                    <div>
+                      <p className="font-medium">{payment.amount}</p>
+                      <p className="text-sm text-muted-foreground">{payment.date}</p>
+                    </div>
+                    <StatusBadge status={payment.status} type={getStatusType(payment.status)} />
                   </div>
-                  <StatusBadge status={payment.status} type={getStatusType(payment.status)} />
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No payment history</p>
+              )}
               <Button variant="outline" className="w-full">
                 View Payment History
               </Button>

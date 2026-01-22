@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, FolderKanban, Clock, CheckCircle } from 'lucide-react';
+import { Users, FolderKanban, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -11,41 +11,17 @@ import {
   getStatusType,
   type Column,
 } from '@/components/dashboard';
-
-const teamStats = [
-  { label: 'Team Members', value: '8', icon: Users },
-  { label: 'Active Projects', value: '6', icon: FolderKanban },
-  { label: 'Pending Tasks', value: '12', icon: Clock },
-  { label: 'Completed Today', value: '5', icon: CheckCircle },
-];
-
-const projects = [
-  { name: 'Corporate Office Cleaning', progress: 75, status: 'On Track' },
-  { name: 'Residential Deep Clean', progress: 40, status: 'In Progress' },
-  { name: 'Hotel Maintenance', progress: 90, status: 'Almost Done' },
-  { name: 'School Sanitization', progress: 20, status: 'Just Started' },
-];
-
-const performanceData = [
-  { name: 'Week 1', completed: 45, target: 50 },
-  { name: 'Week 2', completed: 52, target: 50 },
-  { name: 'Week 3', completed: 48, target: 50 },
-  { name: 'Week 4', completed: 61, target: 50 },
-];
+import { useProjects } from '@/hooks/useProjects';
+import { useTasks } from '@/hooks/useTasks';
+import { useSupportTickets } from '@/hooks/useSupportTickets';
 
 interface ApprovalItem {
-  id: number;
+  id: string;
   type: string;
   from: string;
   detail: string;
   status: string;
 }
-
-const approvalQueue: ApprovalItem[] = [
-  { id: 1, type: 'Time Off Request', from: 'John Doe', detail: 'Dec 15-17', status: 'Pending' },
-  { id: 2, type: 'Expense Report', from: 'Jane Smith', detail: 'KES 12,500', status: 'Pending' },
-  { id: 3, type: 'Task Reassignment', from: 'Mike Johnson', detail: 'Project #42', status: 'Pending' },
-];
 
 const approvalColumns: Column<ApprovalItem>[] = [
   { key: 'type', header: 'Type', sortable: true },
@@ -74,6 +50,70 @@ const approvalColumns: Column<ApprovalItem>[] = [
 
 export default function ManagerDashboard() {
   const { profile } = useAuth();
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks();
+  const { data: tickets = [], isLoading: ticketsLoading } = useSupportTickets();
+
+  const isLoading = projectsLoading || tasksLoading || ticketsLoading;
+
+  // Calculate real stats
+  const activeProjects = projects.filter(p => p.status === 'active' || p.status === 'planning').length;
+  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+  const completedToday = tasks.filter(t => {
+    if (t.status !== 'completed' || !t.completed_at) return false;
+    const today = new Date().toDateString();
+    return new Date(t.completed_at).toDateString() === today;
+  }).length;
+
+  const teamStats = [
+    { label: 'Team Members', value: '-', icon: Users },
+    { label: 'Active Projects', value: String(activeProjects), icon: FolderKanban },
+    { label: 'Pending Tasks', value: String(pendingTasks), icon: Clock },
+    { label: 'Completed Today', value: String(completedToday), icon: CheckCircle },
+  ];
+
+  // Calculate project progress from real data
+  const projectProgress = projects
+    .filter(p => p.status === 'active' || p.status === 'planning' || p.status === 'on_hold')
+    .slice(0, 4)
+    .map(p => {
+      const projectTasks = tasks.filter(t => t.project_id === p.id);
+      const completedProjectTasks = projectTasks.filter(t => t.status === 'completed').length;
+      const progress = projectTasks.length > 0 ? Math.round((completedProjectTasks / projectTasks.length) * 100) : 0;
+      return {
+        name: p.name,
+        progress,
+        status: p.status === 'active' ? 'In Progress' : p.status === 'planning' ? 'Planning' : p.status,
+      };
+    });
+
+  // Generate performance data from tasks
+  const performanceData = [
+    { name: 'Week 1', completed: tasks.filter(t => t.status === 'completed').length, target: 50 },
+    { name: 'Week 2', completed: 0, target: 50 },
+    { name: 'Week 3', completed: 0, target: 50 },
+    { name: 'Week 4', completed: 0, target: 50 },
+  ];
+
+  // Generate approval queue from support tickets
+  const approvalQueue: ApprovalItem[] = tickets
+    .filter(t => t.status === 'open' || t.status === 'pending')
+    .slice(0, 5)
+    .map(t => ({
+      id: t.id,
+      type: t.category || 'Support Ticket',
+      from: 'Customer',
+      detail: t.subject,
+      status: t.status || 'Pending',
+    }));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -105,16 +145,20 @@ export default function ManagerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-5">
-              {projects.map((project) => (
-                <div key={project.name} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{project.name}</span>
-                    <span className="text-sm text-muted-foreground">{project.progress}%</span>
+              {projectProgress.length > 0 ? (
+                projectProgress.map((project) => (
+                  <div key={project.name} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{project.name}</span>
+                      <span className="text-sm text-muted-foreground">{project.progress}%</span>
+                    </div>
+                    <Progress value={project.progress} className="h-2" />
+                    <span className="text-xs text-muted-foreground">{project.status}</span>
                   </div>
-                  <Progress value={project.progress} className="h-2" />
-                  <span className="text-xs text-muted-foreground">{project.status}</span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm">No active projects</p>
+              )}
             </div>
           </CardContent>
         </Card>
