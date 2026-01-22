@@ -9,6 +9,7 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,17 +17,17 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { mockProjects, mockTasks } from '@/data/mockData';
-import type { ProjectStatus, Priority } from '@/types/project';
+import { useProjects } from '@/hooks/useProjects';
+import { useTasks } from '@/hooks/useTasks';
 
-const statusColors: Record<ProjectStatus, string> = {
+const statusColors: Record<string, string> = {
   planning: 'bg-secondary text-secondary-foreground',
   active: 'bg-primary text-primary-foreground',
   completed: 'bg-accent text-accent-foreground',
   'on-hold': 'bg-warning text-warning-foreground',
 };
 
-const priorityColors: Record<Priority, string> = {
+const priorityColors: Record<string, string> = {
   low: 'bg-muted text-muted-foreground',
   medium: 'bg-secondary text-secondary-foreground',
   high: 'bg-warning text-warning-foreground',
@@ -35,8 +36,21 @@ const priorityColors: Record<Priority, string> = {
 
 export default function ProjectDetails() {
   const { id } = useParams();
-  const project = mockProjects.find((p) => p.id === id);
-  const projectTasks = mockTasks.filter((t) => t.projectId === id);
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks();
+
+  const project = projects.find((p) => p.id === id);
+  const projectTasks = tasks.filter((t) => t.project_id === id);
+
+  const isLoading = projectsLoading || tasksLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -51,8 +65,10 @@ export default function ProjectDetails() {
     );
   }
 
-  const completedTasks = projectTasks.filter((t) => t.status === 'done').length;
-  const budgetUsed = (project.spent / project.budget) * 100;
+  const completedTasks = projectTasks.filter((t) => t.status === 'completed').length;
+  const progress = projectTasks.length > 0 
+    ? Math.round((completedTasks / projectTasks.length) * 100) 
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -66,7 +82,9 @@ export default function ProjectDetails() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">{project.name}</h1>
-            <p className="text-muted-foreground">{project.customerName}</p>
+            <p className="text-muted-foreground">
+              {project.customers?.name || 'No customer assigned'}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -84,10 +102,10 @@ export default function ProjectDetails() {
 
       {/* Status & Priority */}
       <div className="flex gap-2">
-        <Badge className={statusColors[project.status]}>
+        <Badge className={statusColors[project.status] || statusColors.planning}>
           {project.status.replace('-', ' ')}
         </Badge>
-        <Badge variant="outline" className={priorityColors[project.priority]}>
+        <Badge variant="outline" className={priorityColors[project.priority] || priorityColors.medium}>
           {project.priority} priority
         </Badge>
       </div>
@@ -102,20 +120,7 @@ export default function ProjectDetails() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Budget</p>
-                <p className="text-xl font-bold">KES {project.budget.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-warning/10 p-3">
-                <DollarSign className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Spent</p>
-                <p className="text-xl font-bold">KES {project.spent.toLocaleString()}</p>
+                <p className="text-xl font-bold">KES {(project.budget || 0).toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -136,12 +141,25 @@ export default function ProjectDetails() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="rounded-full bg-secondary/10 p-3">
-                <Users className="h-5 w-5 text-secondary-foreground" />
+              <div className="rounded-full bg-warning/10 p-3">
+                <Calendar className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Team Members</p>
-                <p className="text-xl font-bold">{project.teamMembers.length}</p>
+                <p className="text-sm text-muted-foreground">Start Date</p>
+                <p className="text-xl font-bold">{project.start_date || 'TBD'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-secondary/10 p-3">
+                <Calendar className="h-5 w-5 text-secondary-foreground" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">End Date</p>
+                <p className="text-xl font-bold">{project.end_date || 'TBD'}</p>
               </div>
             </div>
           </CardContent>
@@ -153,7 +171,6 @@ export default function ProjectDetails() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
         </TabsList>
 
@@ -164,18 +181,20 @@ export default function ProjectDetails() {
                 <CardTitle>Project Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-muted-foreground">{project.description}</p>
+                <p className="text-muted-foreground">
+                  {project.description || 'No description provided.'}
+                </p>
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Start:</span>
-                    <span>{project.startDate}</span>
+                    <span>{project.start_date || 'TBD'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">End:</span>
-                    <span>{project.endDate}</span>
+                    <span>{project.end_date || 'TBD'}</span>
                   </div>
                 </div>
               </CardContent>
@@ -189,20 +208,9 @@ export default function ProjectDetails() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Overall Progress</span>
-                    <span className="font-medium">{project.progress}%</span>
+                    <span className="font-medium">{progress}%</span>
                   </div>
-                  <Progress value={project.progress} className="h-3" />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Budget Used</span>
-                    <span className="font-medium">{budgetUsed.toFixed(1)}%</span>
-                  </div>
-                  <Progress 
-                    value={budgetUsed} 
-                    className={`h-3 ${budgetUsed > 90 ? '[&>div]:bg-destructive' : ''}`} 
-                  />
+                  <Progress value={progress} className="h-3" />
                 </div>
               </CardContent>
             </Card>
@@ -227,11 +235,11 @@ export default function ProjectDetails() {
                     <div className="flex items-center gap-3">
                       <div
                         className={`h-3 w-3 rounded-full ${
-                          task.status === 'done'
+                          task.status === 'completed'
                             ? 'bg-accent'
-                            : task.status === 'in-progress'
+                            : task.status === 'in_progress'
                             ? 'bg-primary'
-                            : task.status === 'review'
+                            : task.status === 'pending'
                             ? 'bg-warning'
                             : 'bg-muted-foreground'
                         }`}
@@ -239,7 +247,7 @@ export default function ProjectDetails() {
                       <div>
                         <p className="font-medium">{task.title}</p>
                         <p className="text-sm text-muted-foreground">
-                          Assigned to {task.assigneeName}
+                          {task.profiles?.name || 'Unassigned'}
                         </p>
                       </div>
                     </div>
@@ -247,7 +255,7 @@ export default function ProjectDetails() {
                       <Badge variant="outline">{task.status}</Badge>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        {task.dueDate}
+                        {task.due_date || 'No due date'}
                       </div>
                     </div>
                   </div>
@@ -255,31 +263,6 @@ export default function ProjectDetails() {
                 {projectTasks.length === 0 && (
                   <p className="text-center text-muted-foreground py-4">No tasks yet</p>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="team" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Members</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                {project.teamMembers.map((member, index) => (
-                  <div key={index} className="flex items-center gap-3 rounded-lg border p-4">
-                    <Avatar>
-                      <AvatarFallback>
-                        {member.split(' ').map((n) => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{member}</p>
-                      <p className="text-sm text-muted-foreground">Team Member</p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </CardContent>
           </Card>

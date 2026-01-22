@@ -11,6 +11,7 @@ import {
   DollarSign,
   Briefcase,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,10 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockCustomers, mockServiceHistory, mockProjects } from '@/data/mockData';
-import type { CustomerStatus } from '@/types/customer';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useProjects } from '@/hooks/useProjects';
+import { useInvoices } from '@/hooks/useInvoices';
 
-const statusColors: Record<CustomerStatus, string> = {
+const statusColors: Record<string, string> = {
   active: 'bg-accent text-accent-foreground',
   inactive: 'bg-muted text-muted-foreground',
   pending: 'bg-warning text-warning-foreground',
@@ -36,9 +38,23 @@ const statusColors: Record<CustomerStatus, string> = {
 
 export default function CustomerProfile() {
   const { id } = useParams();
-  const customer = mockCustomers.find((c) => c.id === id);
-  const serviceHistory = mockServiceHistory.filter((s) => s.customerId === id);
-  const customerProjects = mockProjects.filter((p) => p.customerId === id);
+  const { data: customers = [], isLoading: customersLoading } = useCustomers();
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: invoices = [], isLoading: invoicesLoading } = useInvoices();
+
+  const customer = customers.find((c) => c.id === id);
+  const customerProjects = projects.filter((p) => p.customer_id === id);
+  const customerInvoices = invoices.filter((i) => i.customer_id === id);
+
+  const isLoading = customersLoading || projectsLoading || invoicesLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!customer) {
     return (
@@ -52,6 +68,10 @@ export default function CustomerProfile() {
       </div>
     );
   }
+
+  const totalSpent = customerInvoices
+    .filter((i) => i.status === 'paid')
+    .reduce((sum, i) => sum + (i.total || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -92,7 +112,9 @@ export default function CustomerProfile() {
       </div>
 
       {/* Status Badge */}
-      <Badge className={statusColors[customer.status]}>{customer.status}</Badge>
+      <Badge className={statusColors[customer.status] || statusColors.active}>
+        {customer.status}
+      </Badge>
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -104,7 +126,7 @@ export default function CustomerProfile() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Projects</p>
-                <p className="text-xl font-bold">{customer.totalProjects}</p>
+                <p className="text-xl font-bold">{customerProjects.length}</p>
               </div>
             </div>
           </CardContent>
@@ -117,7 +139,7 @@ export default function CustomerProfile() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Spent</p>
-                <p className="text-xl font-bold">KES {customer.totalSpent.toLocaleString()}</p>
+                <p className="text-xl font-bold">KES {totalSpent.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -130,7 +152,9 @@ export default function CustomerProfile() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Customer Since</p>
-                <p className="text-xl font-bold">{customer.createdAt}</p>
+                <p className="text-xl font-bold">
+                  {new Date(customer.created_at).toLocaleDateString()}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -139,11 +163,11 @@ export default function CustomerProfile() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="rounded-full bg-warning/10 p-3">
-                <Calendar className="h-5 w-5 text-warning" />
+                <FileText className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Last Service</p>
-                <p className="text-xl font-bold">{customer.lastServiceDate || 'N/A'}</p>
+                <p className="text-sm text-muted-foreground">Total Invoices</p>
+                <p className="text-xl font-bold">{customerInvoices.length}</p>
               </div>
             </div>
           </CardContent>
@@ -155,7 +179,7 @@ export default function CustomerProfile() {
         <TabsList>
           <TabsTrigger value="info">Information</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="history">Service History</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
         </TabsList>
 
@@ -177,14 +201,14 @@ export default function CustomerProfile() {
                   <Phone className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium">{customer.phone}</p>
+                    <p className="font-medium">{customer.phone || 'Not provided'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 md:col-span-2">
                   <MapPin className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Address</p>
-                    <p className="font-medium">{customer.address}</p>
+                    <p className="font-medium">{customer.address || 'Not provided'}</p>
                   </div>
                 </div>
               </div>
@@ -204,7 +228,7 @@ export default function CustomerProfile() {
                     <TableRow>
                       <TableHead>Project Name</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Progress</TableHead>
+                      <TableHead>Priority</TableHead>
                       <TableHead>Budget</TableHead>
                       <TableHead>Dates</TableHead>
                     </TableRow>
@@ -223,10 +247,12 @@ export default function CustomerProfile() {
                         <TableCell>
                           <Badge variant="outline">{project.status}</Badge>
                         </TableCell>
-                        <TableCell>{project.progress}%</TableCell>
-                        <TableCell>KES {project.budget.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{project.priority}</Badge>
+                        </TableCell>
+                        <TableCell>KES {(project.budget || 0).toLocaleString()}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {project.startDate} - {project.endDate}
+                          {project.start_date || 'TBD'} - {project.end_date || 'TBD'}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -239,41 +265,39 @@ export default function CustomerProfile() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-4">
+        <TabsContent value="invoices" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Service History</CardTitle>
+              <CardTitle>Invoices</CardTitle>
             </CardHeader>
             <CardContent>
-              {serviceHistory.length > 0 ? (
+              {customerInvoices.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Service</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Date</TableHead>
+                      <TableHead>Invoice #</TableHead>
                       <TableHead>Amount</TableHead>
+                      <TableHead>Due Date</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {serviceHistory.map((service) => (
-                      <TableRow key={service.id}>
-                        <TableCell className="font-medium">{service.projectName}</TableCell>
-                        <TableCell>{service.serviceType}</TableCell>
-                        <TableCell>{service.date}</TableCell>
-                        <TableCell>KES {service.amount.toLocaleString()}</TableCell>
+                    {customerInvoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
+                        <TableCell>KES {(invoice.total || 0).toLocaleString()}</TableCell>
+                        <TableCell>{invoice.due_date || 'N/A'}</TableCell>
                         <TableCell>
                           <Badge
                             className={
-                              service.status === 'completed'
+                              invoice.status === 'paid'
                                 ? 'bg-accent text-accent-foreground'
-                                : service.status === 'cancelled'
+                                : invoice.status === 'overdue'
                                 ? 'bg-destructive text-destructive-foreground'
                                 : 'bg-warning text-warning-foreground'
                             }
                           >
-                            {service.status}
+                            {invoice.status}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -281,7 +305,7 @@ export default function CustomerProfile() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-center text-muted-foreground py-8">No service history</p>
+                <p className="text-center text-muted-foreground py-8">No invoices yet</p>
               )}
             </CardContent>
           </Card>

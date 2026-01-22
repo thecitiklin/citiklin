@@ -1,20 +1,22 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, GripVertical, User, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, GripVertical, User, Calendar, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockProjects, mockTasks } from '@/data/mockData';
-import type { Task, TaskStatus, Priority } from '@/types/project';
+import { useProjects } from '@/hooks/useProjects';
+import { useTasks } from '@/hooks/useTasks';
+
+type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 
 const columns: { id: TaskStatus; title: string; color: string }[] = [
-  { id: 'todo', title: 'To Do', color: 'border-muted-foreground' },
-  { id: 'in-progress', title: 'In Progress', color: 'border-primary' },
-  { id: 'review', title: 'In Review', color: 'border-warning' },
-  { id: 'done', title: 'Done', color: 'border-accent' },
+  { id: 'pending', title: 'To Do', color: 'border-muted-foreground' },
+  { id: 'in_progress', title: 'In Progress', color: 'border-primary' },
+  { id: 'completed', title: 'Completed', color: 'border-accent' },
+  { id: 'cancelled', title: 'Cancelled', color: 'border-destructive' },
 ];
 
-const priorityColors: Record<Priority, string> = {
+const priorityColors: Record<string, string> = {
   low: 'bg-muted text-muted-foreground',
   medium: 'bg-secondary text-secondary-foreground',
   high: 'bg-warning text-warning-foreground',
@@ -22,7 +24,14 @@ const priorityColors: Record<Priority, string> = {
 };
 
 interface TaskCardProps {
-  task: Task;
+  task: {
+    id: string;
+    title: string;
+    description: string | null;
+    priority: string;
+    due_date: string | null;
+    profiles?: { name: string } | null;
+  };
 }
 
 function TaskCard({ task }: TaskCardProps) {
@@ -34,13 +43,13 @@ function TaskCard({ task }: TaskCardProps) {
           <div className="flex-1 min-w-0">
             <h4 className="font-medium text-sm">{task.title}</h4>
             <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-              {task.description}
+              {task.description || 'No description'}
             </p>
           </div>
         </div>
         
         <div className="flex items-center justify-between">
-          <Badge className={`text-xs ${priorityColors[task.priority]}`}>
+          <Badge className={`text-xs ${priorityColors[task.priority] || priorityColors.medium}`}>
             {task.priority}
           </Badge>
         </div>
@@ -48,11 +57,13 @@ function TaskCard({ task }: TaskCardProps) {
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <User className="h-3 w-3" />
-            <span className="truncate max-w-[80px]">{task.assigneeName}</span>
+            <span className="truncate max-w-[80px]">
+              {task.profiles?.name || 'Unassigned'}
+            </span>
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            <span>{task.dueDate}</span>
+            <span>{task.due_date || 'No date'}</span>
           </div>
         </div>
       </CardContent>
@@ -62,8 +73,21 @@ function TaskCard({ task }: TaskCardProps) {
 
 export default function TaskManagement() {
   const { id } = useParams();
-  const project = mockProjects.find((p) => p.id === id);
-  const [tasks] = useState<Task[]>(mockTasks.filter((t) => t.projectId === id));
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks();
+
+  const project = projects.find((p) => p.id === id);
+  const projectTasks = tasks.filter((t) => t.project_id === id);
+
+  const isLoading = projectsLoading || tasksLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -77,7 +101,7 @@ export default function TaskManagement() {
   }
 
   const getTasksByStatus = (status: TaskStatus) => {
-    return tasks.filter((task) => task.status === status);
+    return projectTasks.filter((task) => task.status === status);
   };
 
   return (

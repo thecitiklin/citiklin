@@ -9,6 +9,7 @@ import {
   MoreVertical,
   MessageSquare,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,17 +36,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockTickets } from '@/data/mockData';
-import type { TicketStatus, TicketPriority } from '@/types/customer';
+import { useSupportTickets } from '@/hooks/useSupportTickets';
 
-const statusColors: Record<TicketStatus, string> = {
+const statusColors: Record<string, string> = {
   open: 'bg-destructive text-destructive-foreground',
   'in-progress': 'bg-primary text-primary-foreground',
   resolved: 'bg-accent text-accent-foreground',
   closed: 'bg-muted text-muted-foreground',
 };
 
-const priorityColors: Record<TicketPriority, string> = {
+const priorityColors: Record<string, string> = {
   low: 'bg-muted text-muted-foreground',
   medium: 'bg-secondary text-secondary-foreground',
   high: 'bg-warning text-warning-foreground',
@@ -57,20 +57,23 @@ export default function CustomerSupport() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
 
-  const filteredTickets = mockTickets.filter((ticket) => {
+  const { data: supportTickets = [], isLoading } = useSupportTickets();
+
+  const filteredTickets = supportTickets.filter((ticket) => {
     const matchesSearch =
       ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+      ticket.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const openTickets = mockTickets.filter((t) => t.status === 'open').length;
-  const inProgressTickets = mockTickets.filter((t) => t.status === 'in-progress').length;
-  const urgentTickets = mockTickets.filter((t) => t.priority === 'urgent').length;
+  const openTickets = supportTickets.filter((t) => t.status === 'open').length;
+  const inProgressTickets = supportTickets.filter((t) => t.status === 'in-progress').length;
+  const urgentTickets = supportTickets.filter((t) => t.priority === 'urgent').length;
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-KE', {
       month: 'short',
       day: 'numeric',
@@ -78,6 +81,14 @@ export default function CustomerSupport() {
       minute: '2-digit',
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -138,7 +149,7 @@ export default function CustomerSupport() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Tickets</p>
-                <p className="text-2xl font-bold">{mockTickets.length}</p>
+                <p className="text-2xl font-bold">{supportTickets.length}</p>
               </div>
               <div className="rounded-full bg-secondary/10 p-3">
                 <MessageSquare className="h-5 w-5 text-secondary-foreground" />
@@ -218,41 +229,47 @@ export default function CustomerSupport() {
                     <div>
                       <p className="font-medium">{ticket.subject}</p>
                       <p className="text-sm text-muted-foreground line-clamp-1">
-                        {ticket.description}
+                        {ticket.description || 'No description'}
                       </p>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Link
-                      to={`/customers/${ticket.customerId}`}
-                      className="hover:text-primary"
-                    >
-                      {ticket.customerName}
-                    </Link>
+                    {ticket.customers ? (
+                      <Link
+                        to={`/customers/${ticket.customer_id}`}
+                        className="hover:text-primary"
+                      >
+                        {ticket.customers.name}
+                      </Link>
+                    ) : (
+                      'Unknown'
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{ticket.category}</Badge>
+                    <Badge variant="outline">{ticket.category || 'General'}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={statusColors[ticket.status]}>
-                      {ticket.status.replace('-', ' ')}
+                    <Badge className={statusColors[ticket.status || 'open'] || statusColors.open}>
+                      {(ticket.status || 'open').replace('-', ' ')}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={priorityColors[ticket.priority]}>{ticket.priority}</Badge>
+                    <Badge className={priorityColors[ticket.priority || 'medium'] || priorityColors.medium}>
+                      {ticket.priority || 'medium'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    {ticket.assigneeName ? (
+                    {ticket.profiles ? (
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{ticket.assigneeName}</span>
+                        <span>{ticket.profiles.name}</span>
                       </div>
                     ) : (
                       <span className="text-muted-foreground">Unassigned</span>
                     )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(ticket.createdAt)}
+                    {formatDate(ticket.created_at)}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
