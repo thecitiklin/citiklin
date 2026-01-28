@@ -169,9 +169,15 @@ export default function Index() {
               </ul>
             </div>
           </div>
-          <div className="mt-8 border-t border-border pt-8 text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} Citi Klin. All Rights reserved to LCE. L.C.E is Citi Klin Parent Company.</p>
-            <p className="mt-2">
+          <div className="mt-8 border-t border-border pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+            <p>
+              This Business is developed by{' '}
+              <a href="https://www.yasirzayed.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                Yasir Zayed
+              </a>
+            </p>
+            <p className="text-center">© {new Date().getFullYear()} Citi Klin. All Rights reserved to LCE. L.C.E is Citi Klin Parent Company.</p>
+            <p>
               Powered by{' '}
               <a href="https://www.yasirzayed.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                 Yasir Zayed
