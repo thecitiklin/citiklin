@@ -158,7 +158,7 @@ export default function Index() {
               <h4 className="mb-4 font-semibold">Contact</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" /> +254 700 000 000
+                  <Phone className="h-4 w-4" /> +254739 996305
                 </li>
                 <li className="flex items-center gap-2">
                   <Mail className="h-4 w-4" /> thecitiklin@gmail.com
@@ -170,7 +170,13 @@ export default function Index() {
             </div>
           </div>
           <div className="mt-8 border-t border-border pt-8 text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Citi Klin. All rights reserved.
+            <p>© {new Date().getFullYear()} Citi Klin. All Rights reserved to LCE. L.C.E is Citi Klin Parent Company.</p>
+            <p className="mt-2">
+              Powered by{' '}
+              <a href="https://www.yasirzayed.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                Yasir Zayed
+              </a>
+            </p>
           </div>
         </div>
       </footer>
