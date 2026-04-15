@@ -132,8 +132,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-medium">Email</h3>
                     <p className="text-sm text-muted-foreground">
-                      thecitiklin@gmail.com<br />
-                      support@citiklin.co.ke
+                      thecitiklin@gmail.com
                     </p>
                   </div>
                 </div>
