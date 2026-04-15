@@ -52,7 +52,7 @@ export default function ContactPage() {
   const onSubmit = async (data: ContactFormData) => {
     // Simulate form submission
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log('Contact form submitted:', data);
+    // Contact form submitted
     setIsSubmitted(true);
     toast({
       title: 'Message sent!',
@@ -120,8 +120,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-medium">Phone</h3>
                     <p className="text-sm text-muted-foreground">
-                      +254 700 123 456<br />
-                      +254 733 987 654
+                      +254 739 996305
                     </p>
                   </div>
                 </div>
@@ -133,8 +132,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-medium">Email</h3>
                     <p className="text-sm text-muted-foreground">
-                      thecitiklin@gmail.com<br />
-                      support@citiklin.co.ke
+                      thecitiklin@gmail.com
                     </p>
                   </div>
                 </div>

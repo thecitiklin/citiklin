@@ -71,7 +71,7 @@ export default function BookServicePage() {
 
   const onSubmit = async (data: BookingFormData) => {
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log('Booking submitted:', data);
+    // Booking submitted
     setIsSubmitted(true);
     toast({
       title: 'Booking confirmed!',
