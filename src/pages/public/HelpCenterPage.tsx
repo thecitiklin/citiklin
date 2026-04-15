@@ -22,7 +22,7 @@ const faqs = [
   {
     category: 'booking',
     question: 'How do I book a cleaning service?',
-    answer: 'You can book a cleaning service by clicking the "Book Service" button on our website, calling our customer service line at +254 739 996305, or sending us an email at thecitiklin@gmail.com. Our team will confirm your booking within 2 hours.',
+    answer: 'You can book a cleaning service by clicking the "Book Service" button on our website, calling our customer service line at +254 739 996305, or sending us an email at support@lceafrica.com. Our team will confirm your booking within 2 hours.',
   },
   {
     category: 'booking',
@@ -161,13 +161,13 @@ export default function HelpCenterPage() {
                     </div>
                   </a>
                   <a
-                    href="mailto:thecitiklin@gmail.com"
+                    href="mailto:support@lceafrica.com"
                     className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted transition-colors"
                   >
                     <Mail className="h-5 w-5 text-primary" />
                     <div>
                       <p className="font-medium">Email Support</p>
-                      <p className="text-sm text-muted-foreground">thecitiklin@gmail.com</p>
+                      <p className="text-sm text-muted-foreground">support@lceafrica.com</p>
                     </div>
                   </a>
                   <Link
