@@ -22,7 +22,7 @@ const faqs = [
   {
     category: 'booking',
     question: 'How do I book a cleaning service?',
-    answer: 'You can book a cleaning service by clicking the "Book Service" button on our website, calling our customer service line at +254 700 123 456, or sending us an email at thecitiklin@gmail.com. Our team will confirm your booking within 2 hours.',
+    answer: 'You can book a cleaning service by clicking the "Book Service" button on our website, calling our customer service line at +254 739 996305, or sending us an email at thecitiklin@gmail.com. Our team will confirm your booking within 2 hours.',
   },
   {
     category: 'booking',
@@ -151,13 +151,13 @@ export default function HelpCenterPage() {
                 </p>
                 <div className="space-y-3">
                   <a
-                    href="tel:+254700123456"
+                    href="tel:+254739996305"
                     className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted transition-colors"
                   >
                     <Phone className="h-5 w-5 text-primary" />
                     <div>
                       <p className="font-medium">Call Us</p>
-                      <p className="text-sm text-muted-foreground">+254 700 123 456</p>
+                      <p className="text-sm text-muted-foreground">+254 739 996305</p>
                     </div>
                   </a>
                   <a
