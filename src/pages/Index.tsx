@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';
-import { CheckCircle, Sparkles, Shield, Clock, Phone, Mail, MapPin } from 'lucide-react';
+import { CheckCircle, Sparkles, Shield, Clock } from 'lucide-react';
 
 const services = [
   { title: 'Office Cleaning', description: 'Professional cleaning for commercial spaces' },
