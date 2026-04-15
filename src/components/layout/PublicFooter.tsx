@@ -38,7 +38,7 @@ export function PublicFooter() {
                 <Phone className="h-4 w-4" /> +254739 996305
               </li>
               <li className="flex items-center gap-2">
-                <Mail className="h-4 w-4" /> thecitiklin@gmail.com
+                <Mail className="h-4 w-4" /> support@lceafrica.com
               </li>
               <li className="flex items-center gap-2">
                 <MapPin className="h-4 w-4" /> Nairobi, Kenya

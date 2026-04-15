@@ -568,7 +568,7 @@ export default function ContentManagement() {
                 </div>
                 <div className="space-y-2">
                   <Label>Contact Email</Label>
-                  <Input defaultValue="thecitiklin@gmail.com" />
+                  <Input defaultValue="support@lceafrica.com" />
                 </div>
                 <div className="space-y-2">
                   <Label>Phone Number</Label>
